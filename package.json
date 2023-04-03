@@ -1,0 +1,31 @@
+{
+  "name": "denbeigh-bot",
+  "version": "0.0.0",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.11.0",
+    "@sentry/types": "^7.6.0",
+    "@types/cookie": "^0.5.1",
+    "@types/simple-oauth2": "^4.1.1",
+    "@typescript-eslint/eslint-plugin": "^5.30.7",
+    "@typescript-eslint/parser": "^5.30.7",
+    "eslint": "^8.20.0",
+    "eslint-plugin-editorconfig": "^4.0.2",
+    "prettier": "^2.7.1",
+    "typescript": "^4.7.3",
+    "wrangler": "2.0.22"
+  },
+  "private": true,
+  "scripts": {
+    "prettier": "prettier --check src",
+    "eslint": "eslint --max-warnings=0 src",
+    "format": "prettier --write src"
+  },
+  "dependencies": {
+    "@cfworker/uuid": "^1.12.2",
+    "cookie": "^0.5.0",
+    "discord-api-types": "^0.35.0",
+    "itty-router": "^2.6.1",
+    "simple-oauth2": "^4.3.0",
+    "toucan-js": "^2.6.1"
+  }
+}

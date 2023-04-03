@@ -1,0 +1,5 @@
+node_modules/
+/wrangler*.toml
+*.env
+/dist/
+/result*
