@@ -22,8 +22,8 @@ may be useful to others.
 
 ## How
 
-Build: `nix build .#workerBundle`
-Deploy (requires credentials): `nix run .#releaseTool [staging|production]`
+ - Build: `nix build .#workerBundle`
+ - Deploy (requires credentials): `nix run .#releaseTool [staging|production]`
 
 ## Note
 
