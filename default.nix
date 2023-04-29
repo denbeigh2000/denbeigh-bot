@@ -31,6 +31,14 @@ in
       sentry-cli
       pre-commit
     ];
+
+    shellHook = ''
+      node_modules=${nodeModules}/node_modules
+
+      export PATH="$node_modules/.bin:$PATH"
+
+      ${yarn2nix-moretea.linkNodeModulesHook}
+    '';
   };
 
   inherit (worker) workerBundle releaseTool;
