@@ -5,7 +5,11 @@ import {
     InteractionResponseType,
     InteractionType,
     MessageFlags,
+    APIMessageComponentInteraction,
+    APIModalSubmitGuildInteraction,
+    APIModalInteractionResponse,
 } from "discord-api-types/payloads/v10";
+import { isMessageComponentButtonInteraction, isMessageComponentSelectMenuInteraction } from "discord-api-types/utils/v10";
 import { BotClient, getUserRole } from "../discord";
 import { Env, getRoleIDFromRole, Roles } from "../env";
 import { returnJSON, returnStatus } from "../http";
@@ -13,7 +17,8 @@ import { Sentry } from "../sentry";
 import verify from "../verify";
 
 import { handleGroup } from "./group";
-import { handleInvite } from "./invite";
+import { handleInvite, handleInviteAction } from "./invite";
+import { handlePollCreate } from "./poll";
 import { handlePromote } from "./promote";
 
 const HELP_TEXT = `
@@ -52,6 +57,9 @@ export async function handleInteraction(
         interactionType: interaction.type,
     });
 
+    // NOTE: This model effectively means that we'll only be able to send the
+    // appropriate response the server should expect _after_ we've finished
+    // processing the event.
     switch (interaction.type) {
         case InteractionType.Ping:
             return returnJSON({ type: InteractionResponseType.Pong });
@@ -137,107 +145,78 @@ async function handleCommand(
     await client.sendFollowup(env.CLIENT_ID, interaction.token, msg);
 }
 
-async function handleMessageComponent(
-    interaction: APIMessageComponentSelectMenuInteraction,
+async function handleModalSubmit(
+    interaction: APIModalSubmitGuildInteraction,
     env: Env,
     _ctx: FetchEvent,
     sentry: Sentry
-) {
-    const customId = interaction.data.custom_id;
-    if (!customId.startsWith("action_")) {
-        sentry.sendMessage(
-            `Unhandled custom_id: ${customId}`,
-            "warning"
-        );
-        return;
-    }
-
+): Promise<APIModalInteractionResponse | void> {
+    const customId = interaction.data.custom_id
     const fragments = customId.split("_");
-    if (fragments.length !== 2) {
-        // TODO: Better validation
-        throw new Error(`invalid fragments ${fragments}`);
-    }
-
-    const confirmerId = interaction.member!.user.id;
-    const userId = fragments[1];
     const botClient = new BotClient(env.BOT_TOKEN, sentry);
-    const action = interaction.data.values[0];
 
-    let role: Roles | null = null;
-    switch (action) {
-        case "reject_ignore":
-            break;
-        case "accept_guest":
-            role = Roles.Guest;
-            break;
-        case "accept_member":
-            role = Roles.Member;
-            break;
-        case "accept_moderator":
-            role = Roles.Moderator;
-            break;
+    switch (fragments[0]) {
+        case "pollcreate":
+            return handlePollCreate(botClient, interaction, env, _ctx, sentry);
         default:
             sentry.sendMessage(
-                `unhandled select value ${action}`,
+                `Unhandled custom_id: ${customId}`,
+                "warning"
+            );
+            return;
+    }
+}
+
+async function handleMessageComponent(
+    interaction: APIMessageComponentInteraction,
+    env: Env,
+    _ctx: FetchEvent,
+    sentry: Sentry
+) {  // TODO: This should return a response type, instead of always assuming deferred message 
+    const customId = interaction.data.custom_id;
+    const fragments = customId.split("_");
+    const botClient = new BotClient(env.BOT_TOKEN, sentry);
+    switch (fragments[0]) {
+        case "action":
+            if (fragments.length !== 2) {
+                // TODO: Better validation
+                throw new Error(`invalid fragments ${fragments}`);
+            }
+
+            if (!isMessageComponentSelectMenuInteraction(interaction)) {
+                throw new Error("user_action interaction not selectMenu type");
+            }
+
+            await handleInviteAction(botClient, interaction, env, _ctx, sentry);
+            return;
+
+        case "poll":
+            if (fragments.length !== 4) {
+                // TODO: Better validation
+                throw new Error(`invalid fragments ${fragments}`);
+            }
+
+            if (!isMessageComponentButtonInteraction(interaction)) {
+                throw new Error("vote_poll interaction not button type");
+            }
+            return;
+
+        case "pollcreate":
+            if (fragments.length !== 1) {
+                // TODO: Better validation
+                throw new Error(`invalid fragments ${fragments}`);
+            }
+
+            if (interaction.type !== InteractionType.ModalSubmit) {
+                throw new Error("createpoll interaction type not modal submit");
+            }
+
+        default:
+            sentry.sendMessage(
+                `Unhandled custom_id: ${customId}`,
                 "warning"
             );
             return;
     }
 
-    const userRole = getUserRole(env, interaction.member!.roles);
-    if (!userRole) {
-        await botClient.sendFollowup(
-            env.CLIENT_ID,
-            interaction.token,
-            {
-                content: "You have no valid roles",
-                flags: MessageFlags.Ephemeral,
-            }
-        );
-        return;
-    }
-
-    const isNotMod = userRole < Roles.Moderator;
-    const isGuest = userRole < Roles.Member;
-    const roleNotAboveAwarding = role && userRole <= role;
-    if (isGuest || (isNotMod && roleNotAboveAwarding)) {
-        await botClient.sendFollowup(
-            env.CLIENT_ID,
-            interaction.token,
-            {
-                content:
-                    "You do not have sufficient privileges to grant this",
-                flags: MessageFlags.Ephemeral,
-            }
-        );
-        return;
-    }
-
-    let logMessage: string;
-    if (role) {
-        const applyRole = getRoleIDFromRole(env, role)!;
-        await botClient.addRole(
-            interaction.guild_id!,
-            userId,
-            applyRole
-        );
-        logMessage = `admitted <@${userId}> with the <@&${applyRole}> role`;
-    } else {
-        await botClient.kickUser(interaction.guild_id!, userId);
-        logMessage = `kicked <@${userId}>`;
-    }
-    await botClient.createMessage(env.LOG_CHANNEL, {
-        content: [
-            `<@${confirmerId}> ${logMessage}`,
-            `<@&${env.MOD_ROLE}>`,
-        ].join("\n\n"),
-        allowed_mentions: {
-            roles: [env.MOD_ROLE],
-            users: [userId, confirmerId],
-        },
-    });
-    await botClient.deleteMessage(
-        env.PENDING_CHANNEL,
-        interaction.message.id
-    );
 }
