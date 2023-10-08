@@ -6,6 +6,10 @@ export function respond400(): Response {
     return returnStatus(400, "Bad request");
 }
 
+export function respondNotFound(): Response {
+    return returnStatus(418, "get lost");
+}
+
 export function returnTODO(): Response {
     return returnStatus(500, "TODO");
 }

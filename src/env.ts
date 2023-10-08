@@ -6,7 +6,9 @@ export interface Env {
     CLIENT_SECRET: string;
     SENTRY_DSN: string;
 
+    BUILDKITE_ORGANIZATION: string;
     BUILDKITE_TOKEN: string;
+    BUILDS_CHANNEL: string;
 
     CLIENT_ID: string;
     CLIENT_PUBLIC_KEY: string;

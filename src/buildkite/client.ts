@@ -1,5 +1,10 @@
-import { Attribution } from "./common";
+import { Snowflake } from "discord-api-types/globals";
 import { Env } from "../env";
+
+export interface Attribution {
+    user: Snowflake,
+    message: Snowflake,
+}
 
 export interface Environment { [key: string]: string };
 
