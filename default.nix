@@ -1,7 +1,6 @@
 { callPackage
 , mkShell
 , devPackages
-, neovim
 , yarn
 , sentry-cli
 , pre-commit
@@ -26,7 +25,6 @@ in
   shell = mkShell {
     packages = devPackages.node.allNode18 ++ [
       age
-      neovim
       yarn
       sentry-cli
       pre-commit
