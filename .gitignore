@@ -1,4 +1,5 @@
 node_modules/
+node_modules
 /wrangler*.toml
 *.env
 /dist/
