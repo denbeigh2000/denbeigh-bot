@@ -1,9 +1,12 @@
 export interface Env {
     OAUTH: KVNamespace;
+    BUILDS: KVNamespace;
 
     BOT_TOKEN: string;
     CLIENT_SECRET: string;
     SENTRY_DSN: string;
+
+    BUILDKITE_TOKEN: string;
 
     CLIENT_ID: string;
     CLIENT_PUBLIC_KEY: string;
