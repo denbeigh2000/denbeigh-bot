@@ -72,10 +72,10 @@ export class BuildkiteClient {
             id: body.id as string,
             url: body.web_url as string,
             state: body.state as BuildState,
-            commit: body.commit as string,
+            commit: body.commit as string || "HEAD",
             number: body.number as number,
-            branch: body.branch as string,
-            message: body.message as string,
+            branch: body.branch as string || "master",
+            message: body.message as string || "",
         };
 
         const pipeline: Pipeline = {
@@ -84,9 +84,10 @@ export class BuildkiteClient {
             slug: body.pipeline.slug as string,
         };
 
+        const user = (body.author ? body.author : body.creator) || {};
         const author = {
-            name: body.creator.name as string,
-            imageUrl: body.creator.avatar_url as string,
+            name: "name" in user ? user.name : "",
+            imageUrl: "avatar_url" in user ? user.avatar_url : undefined,
         };
 
         return {

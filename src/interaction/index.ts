@@ -78,7 +78,7 @@ export async function handleInteraction(
                 });
             }
 
-            const resp = await handleCommand(interaction, env, ctx, sentry);
+            const resp = await handleCommand(type, interaction, env, ctx, sentry);
             let msg = resp
             if (!resp) {
                 msg = { content: "OK", flags: MessageFlags.Ephemeral };
@@ -101,6 +101,7 @@ export enum CommandType {
     INVITE = "invite",
     GROUP = "group",
     NOWORK = "nowork",
+    BUILD = "build",
     HELP = "help",
     PING = "ping",
 }
@@ -116,6 +117,7 @@ export function identifyCommand(
         case CommandType.INVITE:
         case CommandType.GROUP:
         case CommandType.NOWORK:
+        case CommandType.BUILD:
         case CommandType.HELP:
         case CommandType.PING:
             return name;
@@ -128,45 +130,31 @@ export function identifyCommand(
     }
 }
 
-function addEphemeral(msg: RESTPostAPIWebhookWithTokenJSONBody | null): RESTPostAPIWebhookWithTokenJSONBody | null {
-    if (msg) {
-        const flags = msg.flags || 0;
-        msg.flags = (flags & MessageFlags.Ephemeral);
-    };
-    return msg;
-}
-
 async function handleCommand(
+    commandType: CommandType,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
     ctx: FetchEvent,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody | null> {
-    const { name } = interaction.data;
     const client = new BotClient(env.BOT_TOKEN, sentry);
-    switch (name) {
-        case "promote":
+    switch (commandType) {
+        case CommandType.PROMOTE:
             return await handlePromote(client, interaction, env, ctx, sentry);
-        case "invite":
+        case CommandType.INVITE:
             return await handleInvite(client, interaction, env, ctx, sentry);
-        case "group":
+        case CommandType.GROUP:
             return await handleGroup(client, interaction, env, ctx, sentry);
-        case "nowork":
+        case CommandType.NOWORK:
             return await handleNoWork(client, interaction, env, ctx, sentry);
-        case "build":
+        case CommandType.BUILD:
             const tracker = new BuildTracker(env.BUILDS);
             const bk = new BuildkiteClient(sentry, env.BUILDKITE_ORGANISATION, env.BUILDKITE_TOKEN);
             return await handleBuild(client, bk, tracker, interaction, env, sentry);
-        case "help":
+        case CommandType.HELP:
             return { content: HELP_TEXT, flags: MessageFlags.Ephemeral };
-        case "ping":
+        case CommandType.PING:
             return { content: "Pong", flags: MessageFlags.Ephemeral };
-        default:
-            sentry.sendMessage(`unhandled command ${name}`, "warning");
-            return {
-                content: `Unknown command \`/${name}\``,
-                flags: MessageFlags.Ephemeral,
-            };
     }
 }
 

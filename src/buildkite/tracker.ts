@@ -10,7 +10,7 @@ export class Tracker {
     // Puts a record of a build into the database.
     // The build will be retrievable by its' global Build ID (UUID).
     public async upsert(data: TrackedBuild) {
-        await this.ns.put(data.build.id, JSON.stringify(data));
+        await this.ns.put(data.build.build.id, JSON.stringify(data));
     }
 
     public async get(id: string): Promise<TrackedBuild | null> {

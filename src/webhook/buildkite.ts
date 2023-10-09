@@ -9,8 +9,6 @@ import { buildEmbed } from "../buildkite/embeds";
 
 export async function handleBuildkiteWebhook(request: Request, env: Env, _ctx: FetchEvent, sentry: Sentry): Promise<Response> {
     if (!verify(request, env.BUILDKITE_HMAC_KEY, sentry)) {
-        console.log("failed to verify buildkite's hmac key");
-        console.log("BK's key is", env.BUILDKITE_HMAC_KEY.length, "characters long");
         return respondNotFound();
     }
 
@@ -34,10 +32,10 @@ export async function handleBuildkiteWebhook(request: Request, env: Env, _ctx: F
 
     const bot = new BotClient(env.BOT_TOKEN, sentry);
     const tracker = new BuildTracker(env.BUILDS);
-    const build = buildFromWebhook(data);
-    let record = await tracker.get(build.id);
-    sentry.setExtra("buildID", build.id);
-    sentry.setExtra("buildState", build.state);
+    const build = buildInfoFromWebhook(data);
+    let record = await tracker.get(build.build.id);
+    sentry.setExtra("buildID", build.build.id);
+    sentry.setExtra("buildState", build.build.state);
     if (record) {
         // This is a build we've seen before
         record = { ...record, build };
@@ -88,14 +86,23 @@ async function createExternalBuildMessage(env: Env, bot: BotClient, build: Build
         type: "build",
         message: message.id,
         channel: message.channel_id,
-        buildID: build.id,
+        buildID: build.build.id,
     };
 }
 
-function authorFromWebook(payload: any): Author {
+function buildInfoFromWebhook(payload: any): BuildInfo {
     return {
-        name: payload.author.name,
-        imageUrl: payload.author.image_url || undefined,
+        build: buildFromWebhook(payload),
+        pipeline: pipelineFromWebhook(payload),
+        author: authorFromWebhook(payload),
+    };
+}
+
+function authorFromWebhook(payload: any): Author {
+    const item = payload.build.author || payload.build.creator;
+    return {
+        name: (item && "name" in item) ? item.name : "",
+        imageUrl: item?.image_url || undefined,
     };
 }
 
@@ -113,7 +120,7 @@ function buildFromWebhook(payload: any): Build {
         url: payload.build.web_url as string,
         number: payload.build.number as number,
         branch: payload.build.branch as string,
-        commit: payload.commit as string,
+        commit: payload.commit as string || "HEAD",
         message: payload.message,
         state: payload.build.state as BuildState,
     };
