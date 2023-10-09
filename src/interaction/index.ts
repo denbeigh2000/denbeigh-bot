@@ -1,6 +1,5 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
-    APIApplicationCommandInteraction,
     APIMessageComponentSelectMenuInteraction,
     InteractionResponseType,
     InteractionType,
@@ -15,6 +14,7 @@ import verify from "../verify";
 
 import { handleGroup } from "./group";
 import { handleInvite } from "./invite";
+import { handleNoWork } from "./nowork";
 import { handlePromote } from "./promote";
 
 const HELP_TEXT = `
@@ -97,6 +97,7 @@ export enum CommandType {
     PROMOTE = "promote",
     INVITE = "invite",
     GROUP = "group",
+    NOWORK = "nowork",
     HELP = "help",
     PING = "ping",
 }
@@ -111,6 +112,7 @@ export function identifyCommand(
         case CommandType.PROMOTE:
         case CommandType.INVITE:
         case CommandType.GROUP:
+        case CommandType.NOWORK:
         case CommandType.HELP:
         case CommandType.PING:
             return name;
@@ -146,6 +148,8 @@ async function handleCommand(
             return await handleInvite(client, interaction, env, ctx, sentry);
         case "group":
             return await handleGroup(client, interaction, env, ctx, sentry);
+        case "nowork":
+            return await handleNoWork(client, interaction, env, ctx, sentry);
         case "help":
             return { content: HELP_TEXT, flags: MessageFlags.Ephemeral };
         case "ping":
