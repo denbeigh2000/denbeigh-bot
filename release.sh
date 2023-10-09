@@ -77,8 +77,6 @@ then
     ENV="dev"
 fi
 
-ln -sf "$WRANGLER_TOML_FILE" wrangler.toml
-
 "$WRANGLER_BIN" deploy \
     --env "$ENV" \
     --no-bundle \
