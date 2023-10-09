@@ -7,7 +7,7 @@ ln -s $NODE_MODULES_PATH/node_modules node_modules
 
 "$WRANGLER_BIN" publish \
     --name local-build \
-    --config "$WRANGLER_TOML" \
+    --compatibility-date 2023-03-02 \
     --minify \
     --dry-run \
     --outdir dist \

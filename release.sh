@@ -76,8 +76,9 @@ then
     ENV="dev"
 fi
 
+ln -sf "$WRANGLER_TOML_FILE" wrangler.toml
+
 "$WRANGLER_BIN" publish \
-    --config "$WRANGLER_TOML_FILE" \
     --env "$ENV" \
     --no-bundle \
     $BUNDLED_WORKER_PATH/index.js
