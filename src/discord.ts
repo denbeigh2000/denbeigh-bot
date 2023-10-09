@@ -137,7 +137,6 @@ class Client {
             }
 
             if (status !== 404) {
-                console.log(body);
                 this.sentry.sendMessage(
                     "Bad Discord request",
                     "warning"

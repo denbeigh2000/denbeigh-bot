@@ -1,11 +1,12 @@
 "$WRANGLER_BIN" --version 2>&1 >/dev/null
 
-WRANGLER_TOML="$(mktemp)"
-echo "$STUB_WRANGLER_TOML" > "$WRANGLER_TOML"
+COMPATIBILITY_DATE="2023-03-02"
 
 ln -s $NODE_MODULES_PATH/node_modules node_modules
 
-"$WRANGLER_BIN" publish \
+"$WRANGLER_BIN" \
+    deploy \
+    --compatibility-date "$COMPATIBILITY_DATE" \
     --name local-build \
     --compatibility-date 2023-03-02 \
     --minify \

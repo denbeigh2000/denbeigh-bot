@@ -25,8 +25,9 @@ CLOUDFLARE_ENV_FILE="$(mktemp)"
 # Load our config directly from our encrypted config file
 # This is passed in as a file later via a tempfile
 WRANGLER_SECRETS_FILE="$("$GIT_BIN" ls-files ":/secrets/wrangler.toml.age")"
-WRANGLER_TOML_FILE="$(mktemp)"
-"$AGE_BIN" --decrypt --identity "$IDENTITY_FILE" --output "$WRANGLER_TOML_FILE" "$WRANGLER_SECRETS_FILE"
+# NOTE: Even though wrangler accepts a --config paramter, it still expects
+# wrangler.toml to be in the local directory.
+"$AGE_BIN" --decrypt --identity "$IDENTITY_FILE" --output ./wrangler.toml "$WRANGLER_SECRETS_FILE"
 
 # Expected vars:
 #  - SENTRY_AUTH_TOKEN
@@ -76,12 +77,10 @@ then
     ENV="dev"
 fi
 
-ln -sf "$WRANGLER_TOML_FILE" wrangler.toml
-
-"$WRANGLER_BIN" publish \
+"$WRANGLER_BIN" deploy \
     --env "$ENV" \
     --no-bundle \
-    $BUNDLED_WORKER_PATH/index.js
+    $BUNDLED_WORKER_PATH/index.js </dev/null
 
 if [[ "$ENV" = "production" ]]
 then
