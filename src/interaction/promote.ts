@@ -1,6 +1,7 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
     ApplicationCommandOptionType,
+    MessageFlags,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { BotClient } from "../discord";
@@ -19,11 +20,12 @@ export async function handlePromote(
     _ctx: FetchEvent,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
+    const ephFlags = { flags: MessageFlags.Ephemeral };
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in promote command";
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...ephFlags };
     }
 
     const awarder = interaction.member!.user.id;
@@ -46,14 +48,14 @@ export async function handlePromote(
     if (!userId || !role) {
         const msg = `Missing one of user id (${userId}) or role id (${role})`;
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...ephFlags };
     }
 
     const validUserRoles = interaction.member.roles.filter(
         (r) => getRoleFromRoleID(env, r) !== null
     );
     if (!validUserRoles) {
-        return { content: "You have no valid roles" };
+        return { content: "You have no valid roles", ...ephFlags };
     }
     const userRoleId = validUserRoles[0];
     const userRole = getRoleFromRoleID(env, userRoleId)!;
@@ -61,6 +63,7 @@ export async function handlePromote(
         return {
             content:
                 "You do not have sufficient privileges for this promotion",
+            ...ephFlags,
         };
     }
 
@@ -80,5 +83,6 @@ export async function handlePromote(
 
     return {
         content: `OK, awarded <@${userId}> the <@&${roleId}> role.`,
+        ...ephFlags,
     };
 }

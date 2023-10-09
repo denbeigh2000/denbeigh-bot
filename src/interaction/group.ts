@@ -1,6 +1,7 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
     ApplicationCommandOptionType,
+    MessageFlags,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { BotClient } from "../discord";
@@ -8,6 +9,8 @@ import { Env } from "../env";
 import { Sentry } from "../sentry";
 
 import { GroupManager } from "../groups";
+
+const EPH_FLAGS = { flags: MessageFlags.Ephemeral };
 
 export async function handleGroup(
     client: BotClient,
@@ -28,27 +31,27 @@ export async function handleGroup(
     if (!options) {
         const msg = "No options defined in group command";
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...EPH_FLAGS };
     }
 
     const user = interaction.member!.user.id;
     if (options.length !== 1) {
         const msg = `Unexpected number of elements ${options.length}`;
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...EPH_FLAGS };
     }
 
     const option = options[0];
     if (option.type !== ApplicationCommandOptionType.Subcommand) {
         const msg = `Unexpected option type${option.type}`;
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...EPH_FLAGS };
     }
 
     if (!option.options) {
         const msg = "No options in subcommand";
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...EPH_FLAGS };
     }
 
     const subcommandName = option.name;
@@ -59,7 +62,7 @@ export async function handleGroup(
     if (option.options.length !== 1) {
         const msg = `Expected exactly 1 option, got ${option.options.length}`;
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...EPH_FLAGS };
     }
     const subOption = option.options[0];
     if (
@@ -68,7 +71,7 @@ export async function handleGroup(
     ) {
         const msg = `Unexpected option ${subOption}, expected a string with name "name"`;
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...EPH_FLAGS };
     }
 
     const groupName = subOption.value;
@@ -85,6 +88,7 @@ export async function handleGroup(
         default:
             return {
                 content: `Unknown command ${option.name}`,
+                ...EPH_FLAGS,
             };
     }
 }
@@ -98,6 +102,7 @@ async function handleCreateGroup(
     if (!user) {
         return {
             content: "You are not in this guild (somehow??)",
+            ...EPH_FLAGS,
         };
     }
 
@@ -109,6 +114,7 @@ async function handleCreateGroup(
     ) {
         return {
             content: "You are not authorised to create roles",
+            ...EPH_FLAGS,
         };
     }
 
@@ -116,6 +122,7 @@ async function handleCreateGroup(
     if (existing) {
         return {
             content: `Group already exists: <@&${newGroup.roleId}>`,
+            ...EPH_FLAGS,
         };
     }
 
@@ -124,6 +131,7 @@ async function handleCreateGroup(
             `Created <@&${newGroup.roleId}>`,
             `Join it with \`/group join name:${newGroup.name}\``,
         ].join("\n"),
+        ...EPH_FLAGS,
     };
 }
 
@@ -136,11 +144,13 @@ async function handleJoinGroup(
     if (!group) {
         return {
             content: `No group named \`${name}\``,
+            ...EPH_FLAGS,
         };
     }
 
     return {
         content: `Added you to <@&${group.roleId}>`,
+        ...EPH_FLAGS,
     };
 }
 
@@ -153,11 +163,13 @@ async function handleLeaveGroup(
     if (!group) {
         return {
             content: `No group named \`${name}\``,
+            ...EPH_FLAGS,
         };
     }
 
     return {
         content: `Removed you from <@&${group.roleId}>`,
+        ...EPH_FLAGS,
     };
 }
 
@@ -170,6 +182,7 @@ async function handleDeleteGroup(
     if (!user) {
         return {
             content: "You are not in this guild (somehow??)",
+            ...EPH_FLAGS,
         };
     }
 
@@ -181,6 +194,7 @@ async function handleDeleteGroup(
     ) {
         return {
             content: "You are not authorised to delete roles",
+            ...EPH_FLAGS,
         };
     }
 
@@ -188,11 +202,13 @@ async function handleDeleteGroup(
     if (!deletedGroup) {
         return {
             content: `No group named \`${name}\``,
+            ...EPH_FLAGS,
         };
     }
 
     return {
         content: `Deleted group \`${name}\``,
+        ...EPH_FLAGS,
     };
 }
 
@@ -203,6 +219,7 @@ async function handleListGroups(
     if (groups.length === 0) {
         return {
             content: "There are no groups yet!",
+            ...EPH_FLAGS,
         };
     }
 
@@ -213,5 +230,5 @@ async function handleListGroups(
     }
     msg += "```\n";
 
-    return { content: msg };
+    return { content: msg, ...EPH_FLAGS };
 }

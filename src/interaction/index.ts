@@ -6,6 +6,7 @@ import {
     InteractionType,
     MessageFlags,
 } from "discord-api-types/payloads/v10";
+import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
 import { BotClient, getUserRole } from "../discord";
 import { Env, getRoleIDFromRole, Roles } from "../env";
 import { returnJSON, returnStatus } from "../http";
@@ -63,14 +64,25 @@ export async function handleInteraction(
                 type: InteractionResponseType.DeferredMessageUpdate,
             });
         case InteractionType.ApplicationCommand:
-            ctx.waitUntil(
-                handleCommand(interaction, env, ctx, sentry)
-            );
+            const type = identifyCommand(interaction.data.name, sentry);
+            if (!type) {
+                return returnJSON({
+                    type: InteractionResponseType.ChannelMessageWithSource,
+                    data: {
+                        flags: MessageFlags.Ephemeral,
+                        content: `No such command: ${interaction.data.name}`,
+                    },
+                });
+            }
+
+            const resp = await handleCommand(interaction, env, ctx, sentry);
+            let msg = resp
+            if (!resp) {
+                msg = { content: "OK", flags: MessageFlags.Ephemeral };
+            }
             return returnJSON({
-                type: InteractionResponseType.DeferredChannelMessageWithSource,
-                data: {
-                    flags: MessageFlags.Ephemeral,
-                },
+                type: InteractionResponseType.ChannelMessageWithSource,
+                data: msg,
             });
         default:
             sentry.sendMessage(
@@ -81,60 +93,70 @@ export async function handleInteraction(
     }
 }
 
+export enum CommandType {
+    PROMOTE = "promote",
+    INVITE = "invite",
+    GROUP = "group",
+    HELP = "help",
+    PING = "ping",
+}
+
+export function identifyCommand(
+    name: string,
+    sentry: Sentry
+): CommandType | null {
+    sentry.setExtra("command", name);
+
+    switch (name) {
+        case CommandType.PROMOTE:
+        case CommandType.INVITE:
+        case CommandType.GROUP:
+        case CommandType.HELP:
+        case CommandType.PING:
+            return name;
+        default:
+            sentry.sendMessage(
+                `unhandled command ${name}`,
+                "error"
+            );
+            return null;
+    }
+}
+
+function addEphemeral(msg: RESTPostAPIWebhookWithTokenJSONBody | null): RESTPostAPIWebhookWithTokenJSONBody | null {
+    if (msg) {
+        const flags = msg.flags || 0;
+        msg.flags = (flags & MessageFlags.Ephemeral);
+    };
+    return msg;
+}
+
 async function handleCommand(
-    interaction: APIApplicationCommandInteraction,
+    interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
     ctx: FetchEvent,
     sentry: Sentry
-) {
+): Promise<RESTPostAPIWebhookWithTokenJSONBody | null> {
     const { name } = interaction.data;
-    sentry.setExtra("command", name);
     const client = new BotClient(env.BOT_TOKEN, sentry);
-    let msg;
     switch (name) {
         case "promote":
-            msg = await handlePromote(
-                client,
-                interaction as APIChatInputApplicationCommandGuildInteraction,
-                env,
-                ctx,
-                sentry
-            );
-            break;
+            return await handlePromote(client, interaction, env, ctx, sentry);
         case "invite":
-            msg = await handleInvite(
-                client,
-                interaction as APIChatInputApplicationCommandGuildInteraction,
-                env,
-                ctx,
-                sentry
-            );
-            break;
+            return await handleInvite(client, interaction, env, ctx, sentry);
         case "group":
-            msg = await handleGroup(
-                client,
-                interaction as APIChatInputApplicationCommandGuildInteraction,
-                env,
-                ctx,
-                sentry
-            );
-            break;
+            return await handleGroup(client, interaction, env, ctx, sentry);
         case "help":
-            msg = { content: HELP_TEXT };
-            break;
+            return { content: HELP_TEXT, flags: MessageFlags.Ephemeral };
         case "ping":
-            msg = { content: "Pong" };
-            break;
+            return { content: "Pong", flags: MessageFlags.Ephemeral };
         default:
-            msg = {
+            sentry.sendMessage(`unhandled command ${name}`, "warning");
+            return {
                 content: `Unknown command \`/${name}\``,
+                flags: MessageFlags.Ephemeral,
             };
-            sentry.sendMessage(
-                `unhandled command ${name}`,
-                "warning"
-            );
     }
-    await client.sendFollowup(env.CLIENT_ID, interaction.token, msg);
 }
 
 async function handleMessageComponent(
