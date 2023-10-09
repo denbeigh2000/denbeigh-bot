@@ -1,3 +1,4 @@
+import { Snowflake } from "discord-api-types/globals";
 import {
     APIUser,
     APIGuildMember,
@@ -6,9 +7,11 @@ import {
 import {
     RESTPostAPIChatInputApplicationCommandsJSONBody,
     RESTPostAPIChannelMessageJSONBody,
-    RESTPostAPIWebhookWithTokenJSONBody,
-    RESTPatchAPIWebhookWithTokenJSONBody,
     RESTPutAPIApplicationGuildCommandsJSONBody,
+    RESTPostAPIChannelMessageResult,
+    RESTPostAPIInteractionFollowupJSONBody,
+    RESTPatchAPIInteractionFollowupJSONBody,
+    RESTPatchAPIChannelMessageResult,
 } from "discord-api-types/rest/v10";
 import { Env, Roles } from "./env";
 import { Sentry } from "./sentry";
@@ -201,7 +204,7 @@ export class BotClient extends Client {
     public async createMessage(
         channelId: string,
         messageContent: RESTPostAPIChannelMessageJSONBody
-    ) {
+    ): Promise<RESTPostAPIChannelMessageResult> {
         const data = JSON.stringify(messageContent);
         const resp = await this.request(
             "Create message",
@@ -213,6 +216,28 @@ export class BotClient extends Client {
         if (!resp) {
             throw new Error("Failed to post discord message");
         }
+
+        return await resp.json();
+    }
+
+    public async editMessage(
+        channelId: Snowflake,
+        messageId: Snowflake,
+        content: RESTPostAPIChannelMessageJSONBody,
+    ): Promise<RESTPatchAPIChannelMessageResult> {
+        const data = JSON.stringify(content);
+        const resp = await this.request(
+            "Edit message",
+            `${API_BASE}/channels/${channelId}/messages/${messageId}`,
+            "PATCH",
+            data,
+            "application/json"
+        );
+        if (!resp) {
+            throw new Error("Failed to edit discord message");
+        }
+
+        return await resp.json();
     }
 
     public async setManagedRole(
@@ -332,7 +357,7 @@ export class BotClient extends Client {
     public async sendFollowup(
         applicationId: string,
         interactionToken: string,
-        data: RESTPostAPIWebhookWithTokenJSONBody
+        data: RESTPostAPIInteractionFollowupJSONBody,
     ) {
         const url = `${API_BASE}/webhooks/${applicationId}/${interactionToken}`;
         const resp = await this.request(
@@ -350,7 +375,7 @@ export class BotClient extends Client {
     public async editFollowup(
         applicationId: string,
         interactionToken: string,
-        data: RESTPatchAPIWebhookWithTokenJSONBody
+        data: RESTPatchAPIInteractionFollowupJSONBody,
     ) {
         const rawData = JSON.stringify(data);
         const url = `${API_BASE}/webhooks/${applicationId}/${interactionToken}/messages/@original`;
