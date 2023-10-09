@@ -14,7 +14,7 @@ function hexStringToArrayBuffer(hex: string): ArrayBuffer {
 
 // https://developers.cloudflare.com/workers/runtime-apis/web-crypto/
 // https://stackoverflow.com/a/67884134
-export async function verify(request: Request, env: Env, sentry: Sentry): Promise<boolean> {
+export async function verify(request: Request, hmacKey: string, sentry: Sentry): Promise<boolean> {
     const signature = request.headers.get("X-Buildkite-Signature");
     if (!signature) {
         sentry.sendMessage("Received buildkite webhook without signature", "info");
@@ -25,7 +25,7 @@ export async function verify(request: Request, env: Env, sentry: Sentry): Promis
 
     const key = await crypto.subtle.importKey(
         "raw",
-        encoder.encode(env.BUILDKITE_TOKEN),
+        encoder.encode(hmacKey),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
         ['verify']

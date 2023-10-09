@@ -9,7 +9,7 @@ import { BuildTracker } from "../buildkite";
 import { buildEmbed } from "../buildkite/embeds";
 
 export async function handleBuildkiteWebhook(env: Env, request: Request, sentry: Sentry): Promise<Response> {
-    if (!verify(request, env, sentry)) {
+    if (!verify(request, env.BUILDKITE_HMAC_KEY, sentry)) {
         return respondNotFound();
     }
 
