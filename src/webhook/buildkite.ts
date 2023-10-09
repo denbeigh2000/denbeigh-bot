@@ -1,4 +1,4 @@
-import { Build, BuildState, IncomingBuild, TrackedBuild } from "../buildkite/common";
+import { Author, Build, BuildInfo, BuildState, IncomingBuild, Pipeline, TrackedBuild } from "../buildkite/common";
 import { BotClient } from "../discord";
 import { Sentry } from "../sentry";
 import { respondNotFound } from "../http";
@@ -76,7 +76,7 @@ async function updateExistingMessage(bot: BotClient, record: TrackedBuild, sentr
     return true;
 }
 
-async function createExternalBuildMessage(env: Env, bot: BotClient, build: Build, sentry: Sentry): Promise<IncomingBuild> {
+async function createExternalBuildMessage(env: Env, bot: BotClient, build: BuildInfo, sentry: Sentry): Promise<IncomingBuild> {
     const embed = buildEmbed(build, sentry);
     const message = await bot.createMessage(env.BUILDS_CHANNEL, { embeds: [embed], });
 
@@ -92,13 +92,29 @@ async function createExternalBuildMessage(env: Env, bot: BotClient, build: Build
     };
 }
 
+function authorFromWebook(payload: any): Author {
+    return {
+        name: payload.author.name,
+        imageUrl: payload.author.image_url || undefined,
+    };
+}
+
+function pipelineFromWebhook(payload: any): Pipeline {
+    return {
+        id: payload.pipeline.id as string,
+        slug: payload.pipeline.slug as string,
+        name: payload.pipeline.name as string,
+    };
+}
+
 function buildFromWebhook(payload: any): Build {
     return {
         id: payload.build.id as string,
         url: payload.build.web_url as string,
         number: payload.build.number as number,
         branch: payload.build.branch as string,
-        commitHash: payload.build.commit as string,
+        commit: payload.commit as string,
+        message: payload.message,
         state: payload.build.state as BuildState,
     };
 }

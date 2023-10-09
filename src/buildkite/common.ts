@@ -24,18 +24,25 @@ export type BuildSource = IncomingBuild | BuildRequest;
 
 export type BuildState = "running" | "scheduled" | "blocked" | "canceled" | "failed" | "passed" | "skipped" | "canceling" | "not run" | "started";
 
+export interface Author {
+    name: string,
+    imageUrl: string | undefined,
+}
+
 export interface Build {
     id: string,
     url: string,
     number: number,
     branch: string,
-    commitHash: string,
+    commit: string,
+    message: string,
     state: BuildState,
+}
 
-    // TODO
-    // commitName: string,
-    // author: string,
-    // authorImageUrl: string,
+export interface BuildInfo {
+    build: Build,
+    pipeline: Pipeline,
+    author: Author,
 }
 
 export interface Pipeline {
@@ -45,7 +52,7 @@ export interface Pipeline {
 }
 
 export interface TrackedBuild {
-    build: Build,
+    build: BuildInfo,
 
     // Source of this request (and associated metadata for updates etc)
     source: BuildSource;

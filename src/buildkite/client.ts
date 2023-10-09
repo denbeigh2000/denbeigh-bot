@@ -1,7 +1,7 @@
 import { Snowflake } from "discord-api-types/globals";
 import { Env } from "../env";
 import { BuildkiteErrorShape, Sentry } from "../sentry";
-import { Build, BuildState } from "./common";
+import { Build, BuildInfo, BuildState, Pipeline } from "./common";
 
 export interface Attribution {
     user: Snowflake,
@@ -50,8 +50,12 @@ export class BuildkiteClient {
         return resp;
     }
 
-    public async createBuild(_env: Env, pipeline: string, params: Partial<BuildParams>, attr: Attribution): Promise<Build | null> {
-        const endpoint = `organizations/${this.organisation}/pipelines/${pipeline}/builds`;
+    public pipelineURL(pipelineName: string): string {
+        return `https://buildkite.com/${this.organisation}/${pipelineName}`;
+    }
+
+    public async createBuild(_env: Env, pipelineName: string, params: Partial<BuildParams>, attr: Attribution): Promise<BuildInfo | null> {
+        const endpoint = `organizations/${this.organisation}/pipelines/${pipelineName}/builds`;
         const data = {
             ...params,
             meta_data: {
@@ -63,13 +67,32 @@ export class BuildkiteClient {
 
         const resp = await this.post(endpoint, data);
         const body = await resp.json() as any;
-        return {
+
+        const build: Build = {
             id: body.id as string,
             url: body.web_url as string,
             state: body.state as BuildState,
-            commitHash: body.commit as string,
+            commit: body.commit as string,
             number: body.number as number,
             branch: body.branch as string,
+            message: body.message as string,
+        };
+
+        const pipeline: Pipeline = {
+            id: body.pipeline.id as string,
+            name: body.pipeline.name as string,
+            slug: body.pipeline.slug as string,
+        };
+
+        const author = {
+            name: body.creator.name as string,
+            imageUrl: body.creator.avatar_url as string,
+        };
+
+        return {
+            build,
+            pipeline,
+            author,
         };
     }
 }

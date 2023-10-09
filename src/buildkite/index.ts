@@ -1,5 +1,5 @@
 import { Environment, BuildParams, BuildkiteClient, Attribution } from "./client";
-import { BuildRequest, BuildSource, TrackedBuild, BuildState, Pipeline, Build, IncomingBuild } from "./common";
+import { BuildRequest, BuildSource, TrackedBuild, BuildState, Pipeline, Build, IncomingBuild, BuildInfo } from "./common";
 import { Tracker as BuildTracker } from "./tracker";
 
 import { Sentry } from "../sentry";
@@ -23,9 +23,10 @@ function discordUserFromWebhook(payload: any, sentry: Sentry): Attribution | nul
 export {
     BuildSource as Associations,
     BuildRequest,
-    TrackedBuild as BuildInfo,
+    BuildInfo,
     BuildParams,
     BuildTracker,
     BuildkiteClient,
     Environment,
+    TrackedBuild,
 };

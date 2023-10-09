@@ -1,6 +1,6 @@
 import { APIEmbed, EmbedType } from "discord-api-types/v10";
 import { Sentry } from "../sentry";
-import { Build, BuildState, TrackedBuild } from "./common";
+import { Build, BuildInfo, BuildState, TrackedBuild } from "./common";
 
 // #F83F23
 const RED = 16269091;
@@ -94,15 +94,31 @@ export const STATE_COLOURS: ColourSet = {
     },
 };
 
-export function buildEmbed(build: Build, sentry: Sentry): APIEmbed {
-    const stateType = stateMap(build.state, sentry);
+export function buildEmbed(build: BuildInfo, sentry: Sentry): APIEmbed {
+    const stateType = stateMap(build.build.state, sentry);
     const stateData = STATE_COLOURS[stateType];
+
+    const commit = build.build.commit.substring(0, 13);
+    const title = `${stateData.emoji} ${build.pipeline.name} (#${build.build.number})`
+    const { url } = build.build;
+    let { message } = build.build;
+    if (message.length > 50) {
+        message = message.substring(0, 47) + "...";
+    }
+
     return {
+        title,
+        url,
+        author: {
+            name: build.author.name,
+            icon_url: build.author.imageUrl,
+        },
         color: stateData.colour,
         thumbnail: { url: stateData.thumbnail },
         fields: [
-            { name: "Pipeline", value: "???" },
-            { name: "State", value: `${stateData.emoji} ${build.state}`, },
+            { name: "Message", value: message },
+            { name: "Commit", value: `\`${commit}\`` },
+            { name: "State", value: `${stateData.emoji} ${build.build.state}`, },
         ]
     };
 }
