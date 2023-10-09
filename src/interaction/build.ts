@@ -1,5 +1,5 @@
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
-import { APIApplicationCommandInteractionDataStringOption, APIChatInputApplicationCommandInteraction, Snowflake } from "discord-api-types/v10";
+import { APIApplicationCommandInteractionDataStringOption, APIChatInputApplicationCommandInteraction, MessageFlags, Snowflake } from "discord-api-types/v10";
 import { BotClient } from "../discord";
 import { Sentry } from "../sentry";
 import { BuildkiteClient, BuildTracker } from "../buildkite";
@@ -28,6 +28,7 @@ export async function handleBuild(
     env: Env,
     sentry: Sentry,
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
+    const ephFlags = { flags: MessageFlags.Ephemeral };
     let user: Snowflake;
     let message = interaction.id;
     if (interaction.member) {
@@ -37,7 +38,7 @@ export async function handleBuild(
     } else {
         const msg = "Build command sent without a user";
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...ephFlags };
     }
 
     if (user !== env.DENBEIGH_USER) {
@@ -46,6 +47,7 @@ export async function handleBuild(
         sentry.sendMessage("Unauthorised user running builds", "warning");
         return {
             content: "...",
+            ...ephFlags,
         };
     }
 
@@ -53,13 +55,13 @@ export async function handleBuild(
     if (!options) {
         const msg = "No options defined in build command";
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...ephFlags };
     }
 
     if (options.length > 3) {
         const msg = `Unexpected number of elements ${options.length}`;
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...ephFlags };
     }
 
     const optionMap = options.reduce((memo, cur) => {
@@ -70,7 +72,7 @@ export async function handleBuild(
     if (!optionMap.pipeline) {
         const msg = "Build command missing pipeline";
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...ephFlags };
     }
 
     const pipeline = optionMap.pipeline.value;
@@ -86,7 +88,7 @@ export async function handleBuild(
     if (!build) {
         const msg = "Failed to create build";
         sentry.sendMessage(msg, "warning");
-        return { content: msg };
+        return { content: msg, ...ephFlags };
     }
 
     const embed = buildEmbed(build, sentry);
@@ -106,5 +108,5 @@ export async function handleBuild(
         },
     });
 
-    return { content: "Successfully started build" };
+    return { content: "Successfully started build", ...ephFlags };
 }
