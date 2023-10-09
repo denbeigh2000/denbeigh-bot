@@ -10,6 +10,7 @@ export interface Env {
     BUILDKITE_ORGANISATION: string;
     BUILDKITE_TOKEN: string;
     BUILDS_CHANNEL: string;
+    BUILD_CURIOSITY_ROLE: string;
 
     CLIENT_ID: string;
     CLIENT_PUBLIC_KEY: string;

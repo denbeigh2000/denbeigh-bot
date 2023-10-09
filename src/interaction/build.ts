@@ -42,11 +42,11 @@ export async function handleBuild(
     }
 
     if (user !== env.DENBEIGH_USER) {
-        // TODO: Zippy response, curiosity role, etc
         sentry.setExtra("userID", user);
         sentry.sendMessage("Unauthorised user running builds", "warning");
+        await bot.addRole(env.GUILD_ID, user, env.BUILD_CURIOSITY_ROLE);
         return {
-            content: "...",
+            content: "👀",
             ...ephFlags,
         };
     }
