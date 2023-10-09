@@ -1,5 +1,6 @@
 import { Snowflake } from "discord-api-types/globals";
 import { Env } from "../env";
+import { Build, BuildState } from "./common";
 
 export interface Attribution {
     user: Snowflake,
@@ -39,7 +40,7 @@ export class BuildkiteClient {
         return await fetch(req);
     }
 
-    public async startBuild(_env: Env, pipeline: string, params: Partial<BuildParams>, attr: Attribution): Promise<Response> {
+    public async startBuild(_env: Env, pipeline: string, params: Partial<BuildParams>, attr: Attribution): Promise<Build> {
         const endpoint = `organizations/${this.organisation}/pipelines/${pipeline}/builds`;
         const data = {
             ...params,
@@ -50,6 +51,15 @@ export class BuildkiteClient {
             },
         };
 
-        return await this.post(endpoint, data);
+        const resp = await this.post(endpoint, data);
+        const body = await resp.json() as any;
+        return {
+            id: body.id as string,
+            url: body.web_url as string,
+            state: body.state as BuildState,
+            commitHash: body.commit as string,
+            number: body.number as number,
+            branch: body.branch as string,
+        };
     }
 }

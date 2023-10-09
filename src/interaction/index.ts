@@ -4,13 +4,16 @@ import {
     InteractionResponseType,
     InteractionType,
     MessageFlags,
+    APIChatInputApplicationCommandInteraction,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { BuildkiteClient, BuildTracker } from "../buildkite";
 import { BotClient, getUserRole } from "../discord";
 import { Env, getRoleIDFromRole, Roles } from "../env";
 import { returnJSON, returnStatus } from "../http";
 import { Sentry } from "../sentry";
 import verify from "../verify";
+import { handleBuild } from "./build";
 
 import { handleGroup } from "./group";
 import { handleInvite } from "./invite";
@@ -150,6 +153,10 @@ async function handleCommand(
             return await handleGroup(client, interaction, env, ctx, sentry);
         case "nowork":
             return await handleNoWork(client, interaction, env, ctx, sentry);
+        case "build":
+            const tracker = new BuildTracker(env.BUILDS);
+            const bk = new BuildkiteClient(env.BUILDKITE_ORGANIZATION, env.BUILDKITE_TOKEN);
+            return await handleBuild(client, bk, tracker, interaction, env, sentry);
         case "help":
             return { content: HELP_TEXT, flags: MessageFlags.Ephemeral };
         case "ping":

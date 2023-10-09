@@ -1,11 +1,18 @@
 import { Environment, BuildParams, BuildkiteClient, Attribution } from "./client";
-import { BuildRequest, BuildSource, TrackedBuild, BuildState, Pipeline, Build } from "./common";
+import { BuildRequest, BuildSource, TrackedBuild, BuildState, Pipeline, Build, IncomingBuild } from "./common";
 import { Tracker as BuildTracker } from "./tracker";
 import { verify as verifyRequest } from "./verify";
 
+import { BotClient } from "../discord";
 import { Env } from "../env";
 import { respondNotFound } from "../http";
 import { Sentry } from "../sentry";
+import { Snowflake } from "discord-api-types/globals";
+
+interface MessageParams {
+    channel: Snowflake,
+    message: Snowflake,
+}
 
 export async function handleBuildkiteWebhook(env: Env, request: Request, sentry: Sentry): Promise<Response> {
     if (!verifyRequest(request, env, sentry)) {
@@ -19,42 +26,76 @@ export async function handleBuildkiteWebhook(env: Env, request: Request, sentry:
     const data = await request.json() as any;
     switch (data.event as string) {
         case "build.scheduled":
-            // TODO
-            break;
         case "build.running":
-            // TODO
-            break;
         case "build.finished":
-            // TODO
-            break;
         case "build.blocked":
-            // TODO
+            // TODO: Anything else here? This field isn't used for any state
+            // gathering anyway.
             break;
         default:
             // incl ping
             return resp;
     }
 
+    const bot = new BotClient(env.BOT_TOKEN, sentry);
     const tracker = new BuildTracker(env.BUILDS);
     const build = buildFromWebhook(data);
-    let record = tracker.get(build.id);
-    if (!record) {
-        // TODO
-        // - Post to builds channel
-        // - Construct IncomingBuild
-        // - Create record in tracker
+    let record = await tracker.get(build.id);
+    sentry.setExtra("buildID", build.id);
+    if (record) {
+        // This is a build we've seen before
+        record = { ...record, build };
+        const shouldUpdate = await updateExistingMessage(bot, env.CLIENT_ID, record, sentry);
+        if (shouldUpdate) {
+            await tracker.upsert(record);
+        }
     } else {
-        // TODO
-        // - Generate new embed, depending on its' source
-        // - Update original message
+        // This is a build we haven't seen before
+        const source = await createExternalBuildMessage(env, bot, build, sentry);
+        await tracker.upsert({ build, source });
     }
 
-    // TODO
-    // - Merge and upsert data into KV
-
-    // const record = tracker.get(data.
-
     return resp;
+}
+
+async function updateExistingMessage(bot: BotClient, clientId: Snowflake, record: TrackedBuild, sentry: Sentry): Promise<boolean> {
+    switch (record.source.type) {
+        case "requestedBuild":
+        case "build":
+            const { channel, message } = record.source;
+            // TODO generate embeds
+            // const.resp = await bot.editMessage(source.channel, source.message, { embeds: [] });
+            const resp = await bot.editMessage(channel, message, { embeds: [] });
+            if (!resp) {
+                sentry.sendException(new Error("Failed to update buildkite -> discord message"));
+            }
+            break;
+        default:
+            // @ts-ignore dealing with real-world input, sometimes the
+            // type system doesn't reflect reality anymore
+            sentry.setExtra("key", record.source.type)
+            sentry.sendMessage("unknown key, aborting", "warning");
+            return false;
+    }
+
+    return true;
+}
+
+// TODO: Move to new top-level builds module
+async function createExternalBuildMessage(env: Env, bot: BotClient, build: Build, sentry: Sentry): Promise<IncomingBuild> {
+    // TODO generate embeds
+    const message = await bot.createMessage(env.BUILDS_CHANNEL, { embeds: [], });
+
+    if (!message) {
+        sentry.sendException(new Error("Failed to create buildkite -> discord message"));
+    }
+
+    return {
+        type: "build",
+        message: message.id,
+        channel: message.channel_id,
+        buildID: build.id,
+    };
 }
 
 function buildFromWebhook(payload: any): Build {

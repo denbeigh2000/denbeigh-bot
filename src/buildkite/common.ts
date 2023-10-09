@@ -3,9 +3,11 @@ import { Snowflake } from "discord-api-types/v10"
 export interface BuildRequest {
     type: "requestedBuild";
     user: Snowflake,
-    message: Snowflake,
     // Interaction ID of slash command that triggered build
     interaction: Snowflake,
+
+    channel: Snowflake,
+    message: Snowflake,
 
     // NOTE: may need to add more here (e.g., interaction response ID, any
     // state we create)
@@ -14,6 +16,7 @@ export interface BuildRequest {
 export interface IncomingBuild {
     type: "build"
     buildID: string,
+    channel: Snowflake,
     message: Snowflake,
 }
 
@@ -38,8 +41,7 @@ export interface Pipeline {
 
 export interface TrackedBuild {
     build: Build,
-    pipeline: Pipeline,
 
-    // Ongoing requests this build is associated with
-    associations: Partial<BuildSource>,
+    // Source of this request (and associated metadata for updates etc)
+    source: BuildSource;
 }
