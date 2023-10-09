@@ -6,7 +6,7 @@ import { handleJoin, handleRedirect } from "./join";
 import { handleInteraction } from "./interaction";
 import { handleRegister } from "./commands";
 import { Sentry } from "./sentry";
-import { handleBuildkiteWebhook } from "./buildkite";
+import { handleBuildkiteWebhook } from "./webhook/buildkite";
 
 const ROUTER = Router();
 

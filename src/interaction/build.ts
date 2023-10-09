@@ -4,6 +4,7 @@ import { BotClient } from "../discord";
 import { Sentry } from "../sentry";
 import { BuildkiteClient, BuildTracker } from "../buildkite";
 import { Env } from "../env";
+import { buildEmbed } from "../buildkite/embeds";
 
 // /build pipeline:.dotfiles [branch:main] [commit:HEAD]
 
@@ -69,10 +70,10 @@ export async function handleBuild(
     const attr = { user, message };
     const build = await bkClient.startBuild(env, pipeline, params, attr);
 
+    const embed = buildEmbed(build);
     const msg = await bot.createMessage(env.BUILDS_CHANNEL, {
         content: `<@${user}>`,
-        // TODO: generate embeds
-        embeds: [],
+        embeds: [embed],
     });
 
     await tracker.upsert({

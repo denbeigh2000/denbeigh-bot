@@ -31,6 +31,11 @@ export interface Build {
     branch: string,
     commitHash: string,
     state: BuildState,
+
+    // TODO
+    // commitName: string,
+    // author: string,
+    // authorImageUrl: string,
 }
 
 export interface Pipeline {
