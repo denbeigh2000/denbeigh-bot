@@ -25,7 +25,7 @@ export async function verify(request: Request, hmacKey: string, sentry: Sentry):
 
     const key = await crypto.subtle.importKey(
         "raw",
-        encoder.encode(hmacKey),
+        encoder.encode(hmacKey.trim()),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
         ['verify']

@@ -1,5 +1,5 @@
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
-import { APIChatInputApplicationCommandInteraction, Snowflake } from "discord-api-types/v10";
+import { APIApplicationCommandInteractionDataStringOption, APIChatInputApplicationCommandInteraction, Snowflake } from "discord-api-types/v10";
 import { BotClient } from "../discord";
 import { Sentry } from "../sentry";
 import { BuildkiteClient, BuildTracker } from "../buildkite";
@@ -12,6 +12,12 @@ interface BuildSchema {
     pipeline: string,
     branch: string | undefined,
     commit: string | undefined,
+}
+
+interface UnpackedBuild {
+    pipeline: APIApplicationCommandInteractionDataStringOption,
+    branch: APIApplicationCommandInteractionDataStringOption | undefined,
+    commit: APIApplicationCommandInteractionDataStringOption | undefined,
 }
 
 export async function handleBuild(
@@ -36,6 +42,8 @@ export async function handleBuild(
 
     if (user !== env.DENBEIGH_USER) {
         // TODO: Zippy response, curiosity role, etc
+        sentry.setExtra("userID", user);
+        sentry.sendMessage("Unauthorised user running builds", "warning");
         return {
             content: "...",
         };
@@ -57,20 +65,31 @@ export async function handleBuild(
     const optionMap = options.reduce((memo, cur) => {
         memo[cur.name] = cur;
         return memo;
-    }, {}) as BuildSchema;
+    }, {}) as UnpackedBuild;
 
-    const { pipeline, branch, commit } = optionMap;
-    if (!pipeline) {
+    if (!optionMap.pipeline) {
         const msg = "Build command missing pipeline";
         sentry.sendMessage(msg, "warning");
         return { content: msg };
     }
 
-    const params = { branch, commit };
+    const pipeline = optionMap.pipeline.value;
+    const getOrElse = (k: string, alt: string) => k in optionMap ? optionMap[k] : alt;
+    const params: BuildSchema = {
+        pipeline,
+        branch: getOrElse("branch", "master"),
+        commit: getOrElse("commit", "HEAD"),
+    };
+    sentry.setExtra("buildParams", params);
     const attr = { user, message };
-    const build = await bkClient.startBuild(env, pipeline, params, attr);
+    const build = await bkClient.createBuild(env, pipeline, params, attr);
+    if (!build) {
+        const msg = "Failed to create build";
+        sentry.sendMessage(msg, "warning");
+        return { content: msg };
+    }
 
-    const embed = buildEmbed(build);
+    const embed = buildEmbed(build, sentry);
     const msg = await bot.createMessage(env.BUILDS_CHANNEL, {
         content: `<@${user}>`,
         embeds: [embed],

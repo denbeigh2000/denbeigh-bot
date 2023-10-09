@@ -5,6 +5,11 @@ import Toucan, { Level } from "toucan-js";
 import { Env } from "./env";
 import { tag } from "../version.json";
 
+export interface BuildkiteErrorShape {
+    message: string,
+    errors: any[],
+}
+
 export class Sentry {
     private client: Toucan;
 
@@ -78,6 +83,15 @@ export class Sentry {
     public logGetToken(request: Request, response: Response) {
         this.logHttp("Getting new token", "oauth", request, response);
         this.logHttpMessage("Token creation", response);
+    }
+
+    public logBuildkiteError(request: Request, response: Response, data: BuildkiteErrorShape) {
+        this.logHttp("Creating buildkite job", "submit", request, response);
+        this.logHttpMessage("Buildkite job submit", response);
+
+        this.setExtra("message", data.message);
+        this.setExtra("errors", data.errors);
+        this.sendMessage("Buildkite API error", "error");
     }
 
     public setExtra(key: string, value: Extra) {

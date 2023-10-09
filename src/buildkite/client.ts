@@ -1,5 +1,6 @@
 import { Snowflake } from "discord-api-types/globals";
 import { Env } from "../env";
+import { BuildkiteErrorShape, Sentry } from "../sentry";
 import { Build, BuildState } from "./common";
 
 export interface Attribution {
@@ -19,11 +20,13 @@ export class BuildkiteClient {
     organisation: string;
     token: string;
     baseURL: string;
+    sentry: Sentry;
 
-    constructor(organisation: string, token: string, baseURL: string = "https://api.buildkite.com/v2/") {
+    constructor(sentry: Sentry, organisation: string, token: string, baseURL: string = "https://api.buildkite.com/v2/") {
         this.organisation = organisation;
         this.token = token;
         this.baseURL = baseURL;
+        this.sentry = sentry;
     }
 
     async post(endpoint: string, data: any): Promise<Response> {
@@ -34,13 +37,20 @@ export class BuildkiteClient {
             body,
             headers: {
                 "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.token}`,
             },
         });
 
-        return await fetch(req);
+        const resp = await fetch(req);
+        if (resp.status >= 400) {
+            const body = await resp.json() as BuildkiteErrorShape;
+            this.sentry.logBuildkiteError(req, resp, body);
+            throw body.message;
+        }
+        return resp;
     }
 
-    public async startBuild(_env: Env, pipeline: string, params: Partial<BuildParams>, attr: Attribution): Promise<Build> {
+    public async createBuild(_env: Env, pipeline: string, params: Partial<BuildParams>, attr: Attribution): Promise<Build | null> {
         const endpoint = `organizations/${this.organisation}/pipelines/${pipeline}/builds`;
         const data = {
             ...params,

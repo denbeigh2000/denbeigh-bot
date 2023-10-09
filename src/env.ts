@@ -7,7 +7,7 @@ export interface Env {
     SENTRY_DSN: string;
 
     BUILDKITE_HMAC_KEY: string;
-    BUILDKITE_ORGANIZATION: string;
+    BUILDKITE_ORGANISATION: string;
     BUILDKITE_TOKEN: string;
     BUILDS_CHANNEL: string;
 

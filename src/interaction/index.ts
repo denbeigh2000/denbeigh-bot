@@ -155,7 +155,7 @@ async function handleCommand(
             return await handleNoWork(client, interaction, env, ctx, sentry);
         case "build":
             const tracker = new BuildTracker(env.BUILDS);
-            const bk = new BuildkiteClient(env.BUILDKITE_ORGANIZATION, env.BUILDKITE_TOKEN);
+            const bk = new BuildkiteClient(sentry, env.BUILDKITE_ORGANISATION, env.BUILDKITE_TOKEN);
             return await handleBuild(client, bk, tracker, interaction, env, sentry);
         case "help":
             return { content: HELP_TEXT, flags: MessageFlags.Ephemeral };

@@ -1,4 +1,3 @@
-import { Snowflake } from "discord-api-types/v10";
 import { Build, BuildState, IncomingBuild, TrackedBuild } from "../buildkite/common";
 import { BotClient } from "../discord";
 import { Sentry } from "../sentry";
@@ -8,8 +7,10 @@ import { Env } from "../env";
 import { BuildTracker } from "../buildkite";
 import { buildEmbed } from "../buildkite/embeds";
 
-export async function handleBuildkiteWebhook(env: Env, request: Request, sentry: Sentry): Promise<Response> {
+export async function handleBuildkiteWebhook(request: Request, env: Env, _ctx: FetchEvent, sentry: Sentry): Promise<Response> {
     if (!verify(request, env.BUILDKITE_HMAC_KEY, sentry)) {
+        console.log("failed to verify buildkite's hmac key");
+        console.log("BK's key is", env.BUILDKITE_HMAC_KEY.length, "characters long");
         return respondNotFound();
     }
 
@@ -17,8 +18,8 @@ export async function handleBuildkiteWebhook(env: Env, request: Request, sentry:
         status: 201,
     });
 
-    const data = await request.json() as any;
-    switch (data.event as string) {
+    const data = await request.json();
+    switch ((data as any).event as string) {
         case "build.scheduled":
         case "build.running":
         case "build.finished":
@@ -36,6 +37,7 @@ export async function handleBuildkiteWebhook(env: Env, request: Request, sentry:
     const build = buildFromWebhook(data);
     let record = await tracker.get(build.id);
     sentry.setExtra("buildID", build.id);
+    sentry.setExtra("buildState", build.state);
     if (record) {
         // This is a build we've seen before
         record = { ...record, build };
@@ -57,7 +59,7 @@ async function updateExistingMessage(bot: BotClient, record: TrackedBuild, sentr
         case "requestedBuild":
         case "build":
             const { channel, message } = record.source;
-            const embed = buildEmbed(record.build);
+            const embed = buildEmbed(record.build, sentry);
             const resp = await bot.editMessage(channel, message, { embeds: [embed] });
             if (!resp) {
                 sentry.sendException(new Error("Failed to update buildkite -> discord message"));
@@ -75,7 +77,7 @@ async function updateExistingMessage(bot: BotClient, record: TrackedBuild, sentr
 }
 
 async function createExternalBuildMessage(env: Env, bot: BotClient, build: Build, sentry: Sentry): Promise<IncomingBuild> {
-    const embed = buildEmbed(build);
+    const embed = buildEmbed(build, sentry);
     const message = await bot.createMessage(env.BUILDS_CHANNEL, { embeds: [embed], });
 
     if (!message) {
