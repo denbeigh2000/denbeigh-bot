@@ -1,4 +1,5 @@
-import { APIEmbed } from "discord-api-types/v10";
+import humanizeDuration from "humanize-duration";
+import { APIEmbed, APIEmbedField } from "discord-api-types/v10";
 import { Sentry } from "../sentry";
 import { BuildInfo, BuildState } from "./common";
 
@@ -121,6 +122,26 @@ export function buildEmbed(build: BuildInfo, sentry: Sentry): APIEmbed {
         ? [{ name: "Message", value: message }]
         : [];
 
+    let timeFields: APIEmbedField[] = [];
+    const { started, finished } = build.build;
+    if (finished && started) {
+        const end = finished.getTime();
+        const start = started.getTime();
+        const fin = Math.round(end / 1000);
+        const finStr = `<t:${fin}:f> (<t:${fin}:R>)`;
+        const duration: string = humanizeDuration(end - start);
+        timeFields = [
+            { name: "Finished at", value: finStr, },
+            { name: "Time taken", value: duration, },
+        ];
+    } else if (started) {
+        const start = Math.round(started.getTime() / 1000);
+        const startStr = `<t:${start}:f> (<t:${start}:R>)`;
+        timeFields = [
+            { name: "Started at", value: startStr }
+        ];
+    }
+
     return {
         title,
         url,
@@ -130,9 +151,11 @@ export function buildEmbed(build: BuildInfo, sentry: Sentry): APIEmbed {
         },
         color: stateData.colour,
         thumbnail: { url: stateData.thumbnail },
-        fields: msgField.concat([
+        fields: [
+            ...msgField,
+            { name: "State", value: build.build.state, },
             { name: "Commit", value: `\`${commit}\`` },
-            { name: "State", value: `${stateData.emoji} ${build.build.state}`, },
-        ]),
+            ...timeFields,
+        ],
     };
 }

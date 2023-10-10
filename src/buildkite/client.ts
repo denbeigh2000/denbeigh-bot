@@ -68,6 +68,8 @@ export class BuildkiteClient {
         const resp = await this.post(endpoint, data);
         const body = await resp.json() as any;
 
+        const toDate = (ts: string | null) => ts !== null ? new Date(ts) : null;
+
         const build: Build = {
             id: body.id as string,
             url: body.web_url as string,
@@ -76,6 +78,8 @@ export class BuildkiteClient {
             number: body.number as number,
             branch: body.branch as string || "master",
             message: body.message as string || "",
+            started: toDate(body.started_at),
+            finished: toDate(body.started_at),
         };
 
         const pipeline: Pipeline = {

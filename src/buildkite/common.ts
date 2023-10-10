@@ -37,6 +37,8 @@ export interface Build {
     commit: string,
     message: string,
     state: BuildState,
+    started: Date | null,
+    finished: Date | null,
 }
 
 export interface BuildInfo {

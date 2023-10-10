@@ -7,6 +7,14 @@ import { Env } from "../env";
 import { BuildTracker } from "../buildkite";
 import { buildEmbed } from "../buildkite/embeds";
 
+function toDate(ts: string | null): Date | null {
+    if (ts === null) {
+        return null;
+    }
+
+    return new Date(ts);
+}
+
 export async function handleBuildkiteWebhook(request: Request, env: Env, _ctx: FetchEvent, sentry: Sentry): Promise<Response> {
     if (!verify(request, env.BUILDKITE_HMAC_KEY, sentry)) {
         return respondNotFound();
@@ -120,9 +128,11 @@ function buildFromWebhook(payload: any): Build {
         url: payload.build.web_url as string,
         number: payload.build.number as number,
         branch: payload.build.branch as string,
-        commit: payload.commit as string || "HEAD",
-        message: payload.message,
+        commit: payload.build.commit as string || "HEAD",
+        message: payload.build.message,
         state: payload.build.state as BuildState,
+        started: toDate(payload.build.started_at),
+        finished: toDate(payload.build.finished_at),
     };
 }
 
