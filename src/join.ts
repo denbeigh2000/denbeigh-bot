@@ -2,7 +2,7 @@ import { APIUser } from "discord-api-types/payloads/v10";
 
 import { BotClient, UserClient } from "./discord";
 import { Env, getRoleIDFromRole } from "./env";
-import { respond400 } from "./http";
+import { respond400, returnStatus } from "./http";
 import { OAuthClient } from "./oauth";
 import { Sentry } from "./sentry";
 
@@ -57,19 +57,24 @@ export async function handleJoin(
         await env.OAUTH.delete(preauthKey);
     }
 
+    const applyRoles = applyRole ? [applyRole] : [];
+    try {
+        await botClient.joinGuild(
+            env.GUILD_ID,
+            token,
+            user.id,
+            applyRoles
+        );
+    } catch (e) {
+        return returnStatus(403, "either discord is down, or you're banned");
+    }
+
     let channel = env.GENERAL_CHANNEL;
     if (!applyRole) {
         channel = env.HOLDING_CHANNEL;
         await postPendingMessage(botClient, env, user);
     }
 
-    const applyRoles = applyRole ? [applyRole] : [];
-    await botClient.joinGuild(
-        env.GUILD_ID,
-        token,
-        user.id,
-        applyRoles
-    );
     return Response.redirect(
         `https://discord.com/channels/${env.GUILD_ID}/${channel}`
     );
