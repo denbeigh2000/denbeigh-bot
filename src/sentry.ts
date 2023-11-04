@@ -85,15 +85,6 @@ export class Sentry {
         this.logHttpMessage("Token creation", response);
     }
 
-    public logBuildkiteError(request: Request, response: Response, data: BuildkiteErrorShape) {
-        this.logHttp("Creating buildkite job", "submit", request, response);
-        this.logHttpMessage("Buildkite job submit", response);
-
-        this.setExtra("message", data.message);
-        this.setExtra("errors", data.errors);
-        this.sendMessage("Buildkite API error", "error");
-    }
-
     public setExtra(key: string, value: Extra) {
         this.client.setExtra(key, value);
     }

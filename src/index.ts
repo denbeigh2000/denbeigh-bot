@@ -5,7 +5,6 @@ import { respondNotFound, returnStatus } from "./http";
 import { handleJoin, handleRedirect } from "./join"; import { handleInteraction } from "./interaction";
 import { handleRegister } from "./commands";
 import { Sentry } from "./sentry";
-import { handleBuildkiteWebhook } from "./webhook/buildkite";
 
 const ROUTER = Router();
 
@@ -13,7 +12,6 @@ ROUTER.get("/join", handleJoin);
 ROUTER.get("/redirect", handleRedirect);
 ROUTER.get("/register", handleRegister);
 ROUTER.post("/interaction", handleInteraction);
-ROUTER.post("/webhook/buildkite", handleBuildkiteWebhook);
 ROUTER.all("*", respondNotFound);
 
 export default {

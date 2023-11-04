@@ -170,39 +170,12 @@ export const NoWorkCommand: RESTPostAPIChatInputApplicationCommandsJSONBody =
     ],
 };
 
-export const BuildCommand: RESTPostAPIChatInputApplicationCommandsJSONBody =
-{
-    name: "build",
-    description: "Build a Buildkite pipeline",
-    options: [
-        {
-            type: ApplicationCommandOptionType.String,
-            name: "pipeline",
-            description: "Pipeline to build",
-            required: true,
-        },
-        {
-            type: ApplicationCommandOptionType.String,
-            name: "branch",
-            description: "Branch to build",
-            required: false,
-        },
-        {
-            type: ApplicationCommandOptionType.String,
-            name: "commit",
-            description: "Commit to build",
-            required: false,
-        },
-    ],
-};
-
 const ALL_COMMANDS = [
     InviteCommand,
     GroupCommand,
     PromoteCommand,
     PingCommand,
     NoWorkCommand,
-    BuildCommand,
     HelpCommand,
 ];
 

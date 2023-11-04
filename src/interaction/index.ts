@@ -4,16 +4,13 @@ import {
     InteractionResponseType,
     InteractionType,
     MessageFlags,
-    APIChatInputApplicationCommandInteraction,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
-import { BuildkiteClient, BuildTracker } from "../buildkite";
 import { BotClient, getUserRole } from "../discord";
 import { Env, getRoleIDFromRole, Roles } from "../env";
 import { returnJSON, returnStatus } from "../http";
 import { Sentry } from "../sentry";
 import verify from "../verify";
-import { handleBuild } from "./build";
 
 import { handleGroup } from "./group";
 import { handleInvite } from "./invite";
@@ -101,7 +98,6 @@ export enum CommandType {
     INVITE = "invite",
     GROUP = "group",
     NOWORK = "nowork",
-    BUILD = "build",
     HELP = "help",
     PING = "ping",
 }
@@ -117,7 +113,6 @@ export function identifyCommand(
         case CommandType.INVITE:
         case CommandType.GROUP:
         case CommandType.NOWORK:
-        case CommandType.BUILD:
         case CommandType.HELP:
         case CommandType.PING:
             return name;
@@ -147,10 +142,6 @@ async function handleCommand(
             return await handleGroup(client, interaction, env, ctx, sentry);
         case CommandType.NOWORK:
             return await handleNoWork(client, interaction, env, ctx, sentry);
-        case CommandType.BUILD:
-            const tracker = new BuildTracker(env.BUILDS);
-            const bk = new BuildkiteClient(sentry, env.BUILDKITE_ORGANISATION, env.BUILDKITE_TOKEN);
-            return await handleBuild(client, bk, tracker, interaction, env, sentry);
         case CommandType.HELP:
             return { content: HELP_TEXT, flags: MessageFlags.Ephemeral };
         case CommandType.PING:
