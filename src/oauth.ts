@@ -4,6 +4,7 @@ import { uuid } from "@cfworker/uuid";
 
 import { UserClient } from "./discord";
 import { Sentry } from "./sentry";
+import { D1QB, D1ResultOne, Raw } from "workers-qb";
 import { Snowflake } from "discord-api-types/globals";
 
 const OAUTH_BASE = "https://discord.com/api/oauth2";
@@ -229,5 +230,75 @@ export class OAuthClient {
             expiresAt,
             scope: data["scope"].split(" "),
         };
+    }
+}
+
+interface OAuthRecord {
+    refreshToken: string,
+    expiresAt: Date,
+    user: Snowflake,
+}
+
+const OAUTH_TABLE_NAME = "oauth";
+
+export class OAuthStore {
+    qb: D1QB;
+
+    constructor(db: D1Database) {
+        this.qb = new D1QB(db);
+    }
+
+    private async encode(accessToken: string): Promise<string> {
+        // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#converting_a_digest_to_a_hex_string
+        const tokenBuffer = new TextEncoder().encode(accessToken);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", tokenBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    public async get(accessToken: string): Promise<OAuthRecord | null> {
+        const hashedToken = await this.encode(accessToken);
+        const fetched: D1ResultOne = await this.qb.fetchOne({
+            tableName: OAUTH_TABLE_NAME,
+            fields: ["refresh_token", "expires_at", "user"],
+            where: {
+                conditions: "access_token_hash = ?1",
+                params: [hashedToken],
+            },
+        }).execute();
+
+        const { results } = fetched;
+        if (!results) {
+            return null;
+        }
+
+        return {
+            refreshToken: results.refresh_token as string,
+            expiresAt: new Date(results.expires_at as number),
+            user: results.user as Snowflake,
+        };
+    }
+
+    public async upsert(accessToken: string, record: OAuthRecord) {
+        const hashedToken = await this.encode(accessToken);
+        const expiresNum = Number(record.expiresAt);
+
+        this.qb.insert({
+            tableName: OAUTH_TABLE_NAME,
+            data: {
+                access_token_hash: hashedToken,
+                refresh_token: record.refreshToken,
+                expires_at: expiresNum,
+                user: record.user,
+            },
+            onConflict: {
+                column: "access_token_hash",
+                data: {
+                    refresh_token: new Raw("excluded.refresh_token"),
+                    expires_at: new Raw("excluded.expires_at"),
+                    user: new Raw("record.user"),
+                },
+            },
+        });
     }
 }
