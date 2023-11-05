@@ -2,11 +2,12 @@ import { parse as parseCookie } from "cookie";
 import { OAuth2Scopes } from "discord-api-types/payloads/v10";
 import { uuid } from "@cfworker/uuid";
 
-import { UserClient } from "./discord";
-import { Sentry } from "./sentry";
-import { D1QB, D1ResultOne, D1Result, Raw } from "workers-qb";
+import { UserClient } from "../discord";
+import { Sentry } from "../sentry";
 import { Snowflake } from "discord-api-types/globals";
 import { Routes } from "discord-api-types/v10";
+import { TokenStore } from "./tokenstore";
+import { StateStore } from "./statestore";
 
 const API_BASE_URL = "https://discordapp.com/api"
 
@@ -43,23 +44,23 @@ export class OAuthClient {
     clientId: string;
     clientSecret: string;
     redirectUri: string;
-    store: OAuthStore;
-    stateStore: KVNamespace;
+    tokenStore: TokenStore;
+    stateStore: StateStore;
     sentry: Sentry;
 
     constructor(
         clientId: string,
         clientSecret: string,
         redirectUri: string,
-        storeDB: D1Database,
-        stateStore: KVNamespace,
+        tokenDB: D1Database,
+        stateKV: KVNamespace,
         sentry: Sentry
     ) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
-        this.store = new OAuthStore(storeDB, sentry);
-        this.stateStore = stateStore;
+        this.tokenStore = new TokenStore(tokenDB, sentry);
+        this.stateStore = new StateStore(stateKV);
         this.sentry = sentry;
     }
 
@@ -95,23 +96,11 @@ export class OAuthClient {
     public async checkState(
         state: string
     ): Promise<boolean> {
-        const stateKey = `state:${state}`;
-        const stateValue = await this.stateStore.get(stateKey);
-        if (stateValue === undefined) {
-            return false;
-        }
-
-        await this.stateStore.delete(stateKey);
-        return true;
+        return await this.stateStore.checkRedirect(state);
     }
 
     public async authorise(): Promise<Response> {
-        const state = uuid().toString();
-        await this.stateStore.put(`state:${state}`, "OK", {
-            expirationTtl: STATE_TTL_SEC,
-        });
-
-
+        const state = await this.stateStore.createState();
         const url = new URL(API_BASE_URL + Routes.oauth2Authorization());
         const params = new URLSearchParams([
             ["response_type", "code"],
@@ -154,7 +143,7 @@ export class OAuthClient {
     }
 
     public async checkToken(token: string): Promise<string | null> {
-        const record = await this.store.get(token);
+        const record = await this.tokenStore.get(token);
         if (!record) {
             return null;
         }
@@ -173,9 +162,6 @@ export class OAuthClient {
         if (!newToken) {
             return null;
         }
-
-        // Delete record of old token
-        await this.store.replace(newToken.accessToken, token, { refreshToken, expiresAt, user: newToken.user, });
 
         // Return refreshed token
         return newToken.accessToken;
@@ -209,7 +195,7 @@ export class OAuthClient {
 
         const token = await this.parseRefreshRseponseAndFetchUserId(text);
         // TODO: Store something more useful than the user ID?
-        await this.store.replace(oldAccessToken, token.accessToken, {
+        await this.tokenStore.replace(oldAccessToken, token.accessToken, {
             expiresAt: new Date(token.expiresAt),
             refreshToken: token.refreshToken,
             user: token.user,
@@ -225,7 +211,7 @@ export class OAuthClient {
         const expiresAtDate = new Date(tokenInfo.expiresAt);
 
         // NOTE: we may now need to set our user in sentry now
-        await this.store.upsert(
+        await this.tokenStore.upsert(
             tokenInfo.accessToken,
             { expiresAt: expiresAtDate, refreshToken: tokenInfo.refreshToken, user: tokenInfo.user },
         );
@@ -259,107 +245,3 @@ export class OAuthClient {
     }
 }
 
-interface OAuthRecord {
-    refreshToken: string,
-    expiresAt: Date,
-    user: Snowflake,
-}
-
-const OAUTH_TABLE_NAME = "oauth";
-
-export class OAuthStore {
-    qb: D1QB;
-    sentry: Sentry;
-
-    constructor(db: D1Database, sentry: Sentry) {
-        this.qb = new D1QB(db);
-        this.sentry = sentry;
-    }
-
-    private async encode(accessToken: string): Promise<string> {
-        // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#converting_a_digest_to_a_hex_string
-        const tokenBuffer = new TextEncoder().encode(accessToken);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", tokenBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-    }
-
-    public async get(accessToken: string): Promise<OAuthRecord | null> {
-        const hashedToken = await this.encode(accessToken);
-        const fetched: D1ResultOne = await this.qb.fetchOne({
-            tableName: OAUTH_TABLE_NAME,
-            fields: ["refresh_token", "expires_at", "user"],
-            where: {
-                conditions: "access_token_hash = ?1",
-                params: [hashedToken],
-            },
-        }).execute();
-
-        const { results } = fetched;
-        if (!results) {
-            return null;
-        }
-
-        return {
-            refreshToken: results.refresh_token as string,
-            expiresAt: new Date(results.expires_at as number),
-            user: results.user as Snowflake,
-        };
-    }
-
-    public async upsert(accessToken: string, record: OAuthRecord) {
-        const hashedToken = await this.encode(accessToken);
-        const expiresNum = Number(record.expiresAt);
-
-        await this.qb.insert({
-            tableName: OAUTH_TABLE_NAME,
-            data: {
-                access_token_hash: hashedToken,
-                refresh_token: record.refreshToken,
-                expires_at: expiresNum,
-                user: record.user,
-            },
-            onConflict: {
-                column: "access_token_hash",
-                data: {
-                    refresh_token: new Raw("excluded.refresh_token"),
-                    expires_at: new Raw("excluded.expires_at"),
-                    user: new Raw("excluded.user"),
-                },
-            },
-        }).execute();
-    }
-
-    public async replace(oldToken: string, newToken: string, newRecord: OAuthRecord) {
-        const oldHashedToken = await this.encode(oldToken);
-        const hashedToken = await this.encode(newToken);
-
-        const inserted: D1Result = await this.qb.insert({
-            tableName: OAUTH_TABLE_NAME,
-            data: {
-                access_token_hash: hashedToken,
-                refresh_token: newRecord.refreshToken,
-                expires_at: Number(newRecord.expiresAt),
-                user: newRecord.user,
-            },
-        })
-            .execute();
-
-        if (!inserted.success) {
-            this.sentry.sendMessage("failed to insert new token record");
-        }
-
-        const deleted: D1Result = await this.qb.delete({
-            tableName: OAUTH_TABLE_NAME,
-            where: {
-                conditions: "access_token_hash = ?1",
-                params: [oldHashedToken],
-            },
-        })
-            .execute();
-
-        if (!deleted.success) {
-            this.sentry.sendMessage("failed to delete old token hash", "info");
-        }
-    }
-}
