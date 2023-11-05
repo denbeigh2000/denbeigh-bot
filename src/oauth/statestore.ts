@@ -1,7 +1,7 @@
 import { uuid } from "@cfworker/uuid";
 
-// 10 minutes (arguably generous)
-const DEFAULT_TTL_SEC = 10 * 60;
+// 3 minutes
+const DEFAULT_TTL_SEC = 3 * 60;
 
 // 30 minutes
 const MAX_TTL_SEC = 30 * 60;
