@@ -4,14 +4,23 @@ import { uuid } from "@cfworker/uuid";
 
 import { UserClient } from "./discord";
 import { Sentry } from "./sentry";
+import { Snowflake } from "discord-api-types/globals";
 
 const OAUTH_BASE = "https://discord.com/api/oauth2";
 const OAUTH_AUTHZ = `${OAUTH_BASE}/authorize`;
 const OAUTH_TOKEN = `${OAUTH_BASE}/token`;
 // const OAUTH_REVOKE = `${OAUTH_TOKEN}/revoke`;
 
-const SCOPES = [OAuth2Scopes.Identify, OAuth2Scopes.GuildsJoin];
+const SCOPES = [OAuth2Scopes.Identify, OAuth2Scopes.GuildsJoin, OAuth2Scopes.RoleConnectionsWrite];
 const STATE_TTL_SEC = 10 * 60;
+
+export async function tokenStorageKey(accessToken: string): Promise<string> {
+    // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#converting_a_digest_to_a_hex_string
+    const tokenBuffer = new TextEncoder().encode(accessToken);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", tokenBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 export function getAuthToken(req: Request): string | null {
     const cookieStr = req.headers.get("Cookie");
@@ -34,32 +43,34 @@ export class OAuthClient {
     clientId: string;
     clientSecret: string;
     redirectUri: string;
+    store: KVNamespace;
     sentry: Sentry;
 
     constructor(
         clientId: string,
         clientSecret: string,
         redirectUri: string,
+        store: KVNamespace,
         sentry: Sentry
     ) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
+        this.store = store;
         this.sentry = sentry;
     }
 
     public async getRefreshOrAuthorise(
-        store: KVNamespace,
         req: Request
     ): Promise<Response | string> {
         const givenToken = getAuthToken(req);
         if (!givenToken) {
-            return this.authorise(store);
+            return this.authorise();
         }
 
-        const token = await this.checkToken(store, givenToken);
+        const token = await this.checkToken(givenToken);
         if (!token) {
-            return this.authorise(store);
+            return this.authorise();
         }
 
         const path = new URL(req.url).pathname;
@@ -79,22 +90,21 @@ export class OAuthClient {
     }
 
     public async checkState(
-        store: KVNamespace,
         state: string
     ): Promise<boolean> {
         const stateKey = `state:${state}`;
-        const stateValue = await store.get(stateKey);
+        const stateValue = await this.store.get(stateKey);
         if (stateValue === undefined) {
             return false;
         }
 
-        await store.delete(stateKey);
+        await this.store.delete(stateKey);
         return true;
     }
 
-    public async authorise(store: KVNamespace): Promise<Response> {
+    public async authorise(): Promise<Response> {
         const state = uuid().toString();
-        await store.put(`state:${state}`, "OK", {
+        await this.store.put(`state:${state}`, "OK", {
             expirationTtl: STATE_TTL_SEC,
         });
 
@@ -113,7 +123,6 @@ export class OAuthClient {
     }
 
     public async getToken(
-        store: KVNamespace,
         code: string
     ): Promise<AccessTokenResponse | null> {
         const request = new Request(OAUTH_TOKEN, {
@@ -130,16 +139,16 @@ export class OAuthClient {
             }),
         });
         const response = await fetch(request);
-        const token = await this.upsertToken(store, response);
+        const token = await this.upsertToken(response);
         this.sentry.logGetToken(request, response);
         return token;
     }
 
     public async checkToken(
-        store: KVNamespace,
         token: string
     ): Promise<string | null> {
-        const record = await store.get(`token:${token}`);
+        const encToken = await tokenStorageKey(token);
+        const record = await this.store.get(`enctoken:${encToken}`);
         if (!record) {
             return null;
         }
@@ -152,20 +161,19 @@ export class OAuthClient {
         }
 
         // Refresh token, save to store
-        const newToken = await this.refreshToken(store, refreshToken);
+        const newToken = await this.refreshToken(refreshToken);
         if (!newToken) {
             return null;
         }
 
         // Delete record of old token
-        await store.delete(`token:${token}`);
+        await this.store.delete(`enctoken:${encToken}`);
 
         // Return refreshed token
         return newToken.accessToken;
     }
 
     private async refreshToken(
-        store: KVNamespace,
         refreshToken: string
     ): Promise<AccessTokenResponse | null> {
         const request = new Request(OAUTH_TOKEN, {
@@ -182,7 +190,7 @@ export class OAuthClient {
         });
 
         const response = await fetch(request);
-        const token = await this.upsertToken(store, response);
+        const token = await this.upsertToken(response);
 
         this.sentry.logRefresh(request, response);
 
@@ -190,7 +198,6 @@ export class OAuthClient {
     }
 
     private async upsertToken(
-        store: KVNamespace,
         response: Response
     ): Promise<AccessTokenResponse | null> {
         const text = await response.text();
@@ -209,8 +216,9 @@ export class OAuthClient {
         // NOTE: This has the side effect of calling sentry.setUser, so no need to
         // call here.
         const user = await client.getUserInfo();
-        await store.put(
-            `token:${accessToken}`,
+        const storageToken = await tokenStorageKey(accessToken);
+        await this.store.put(
+            `enctoken:${storageToken}`,
             JSON.stringify({ expiresAt, refreshToken, user })
         );
 
