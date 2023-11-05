@@ -16,12 +16,11 @@ export async function handleJoin(
         env.CLIENT_ID,
         env.CLIENT_SECRET,
         env.REDIRECT_URI,
+        env.OAUTH_DB,
+        env.OAUTH,
         sentry
     );
-    const token = await oauthClient.getRefreshOrAuthorise(
-        env.OAUTH,
-        req
-    );
+    const token = await oauthClient.getRefreshOrAuthorise(req);
     if (token instanceof Response) {
         return token;
     }
@@ -31,7 +30,7 @@ export async function handleJoin(
     const user = await userClient.getUserInfo();
     if (!user) {
         // Just in case our token expires between those two calls...somehow
-        return oauthClient.authorise(env.OAUTH);
+        return oauthClient.authorise();
     }
 
     const botClient = new BotClient(env.BOT_TOKEN, sentry);
@@ -163,14 +162,16 @@ export async function handleRedirect(
         env.CLIENT_ID,
         env.CLIENT_SECRET,
         env.REDIRECT_URI,
+        env.OAUTH_DB,
+        env.OAUTH,
         sentry
     );
-    const ok = await oauthClient.checkState(env.OAUTH, state);
+    const ok = await oauthClient.checkState(state);
     if (!ok) {
         return respond400();
     }
 
-    const token = await oauthClient.getToken(env.OAUTH, code);
+    const token = await oauthClient.getToken(code);
     if (!token) {
         return respond400();
     }

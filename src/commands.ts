@@ -3,7 +3,7 @@ import { ApplicationCommandOptionType } from "discord-api-types/payloads/v10";
 
 import { Env } from "./env";
 import { BotClient, UserClient } from "./discord";
-import { OAuthClient } from "./oauth";
+import { OAuthClient, OAuthStore } from "./oauth";
 import { returnStatus } from "./http";
 import { Sentry } from "./sentry";
 
@@ -189,10 +189,11 @@ export async function handleRegister(
         env.CLIENT_ID,
         env.CLIENT_SECRET,
         env.REDIRECT_URI,
+        env.OAUTH_DB,
+        env.OAUTH,
         sentry
     );
     const token = await oauthClient.getRefreshOrAuthorise(
-        env.OAUTH,
         req
     );
     if (token instanceof Response) {
@@ -202,7 +203,7 @@ export async function handleRegister(
     const userClient = new UserClient(token, sentry);
     const user = await userClient.getUserInfo();
     if (!user) {
-        return oauthClient.authorise(env.OAUTH);
+        return oauthClient.authorise();
     }
 
     if (user.id !== env.DENBEIGH_USER) {

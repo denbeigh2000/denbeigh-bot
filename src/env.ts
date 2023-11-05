@@ -2,6 +2,8 @@ export interface Env {
     OAUTH: KVNamespace;
     BUILDS: KVNamespace;
 
+    OAUTH_DB: D1Database;
+
     BOT_TOKEN: string;
     CLIENT_SECRET: string;
     SENTRY_DSN: string;

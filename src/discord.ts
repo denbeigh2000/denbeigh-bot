@@ -62,6 +62,8 @@ export function renderUser(user: APIUser): string {
     return `<@${user.id}> (\`${user.username}#${user.discriminator}\`)`;
 }
 
+// TODO: Migrate this and BotClient to use @discordjs/rest (need to figure out how to do the
+// different authentication types
 class Client {
     token: string;
     clientType = "";
