@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@cfworker/uuid": "^1.12.2",
+    "@discordjs/rest": "^2.0.1",
     "cookie": "^0.5.0",
     "discord-api-types": "^0.37.0",
     "humanize-duration": "^3.30.0",

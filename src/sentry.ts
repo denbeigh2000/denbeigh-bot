@@ -10,6 +10,12 @@ export interface BuildkiteErrorShape {
     errors: any[],
 }
 
+function formatUser(user: APIUser): string {
+    return user.discriminator !== "0"
+        ? `${user.username}#${user.discriminator}`
+        : user.username;
+}
+
 export class Sentry {
     private client: Toucan;
 
@@ -27,7 +33,7 @@ export class Sentry {
     public setUser(user: APIUser) {
         this.client.setUser({
             id: user.id,
-            username: `${user!.username}#${user!.discriminator}`,
+            username: formatUser(user),
         });
     }
 

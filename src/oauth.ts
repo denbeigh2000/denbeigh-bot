@@ -4,13 +4,9 @@ import { uuid } from "@cfworker/uuid";
 
 import { UserClient } from "./discord";
 import { Sentry } from "./sentry";
-import { D1QB, D1ResultOne, Raw } from "workers-qb";
+import { D1QB, D1ResultOne, D1Result, Raw } from "workers-qb";
 import { Snowflake } from "discord-api-types/globals";
-
-const OAUTH_BASE = "https://discord.com/api/oauth2";
-const OAUTH_AUTHZ = `${OAUTH_BASE}/authorize`;
-const OAUTH_TOKEN = `${OAUTH_BASE}/token`;
-// const OAUTH_REVOKE = `${OAUTH_TOKEN}/revoke`;
+import { Routes } from "discord-api-types/v10";
 
 const SCOPES = [OAuth2Scopes.Identify, OAuth2Scopes.GuildsJoin, OAuth2Scopes.RoleConnectionsWrite];
 const STATE_TTL_SEC = 10 * 60;
@@ -38,26 +34,30 @@ export interface AccessTokenResponse {
     expiresAt: number;
     refreshToken: string;
     scope: string[];
+    user: Snowflake;
 }
 
 export class OAuthClient {
     clientId: string;
     clientSecret: string;
     redirectUri: string;
-    store: KVNamespace;
+    store: OAuthStore;
+    stateStore: KVNamespace;
     sentry: Sentry;
 
     constructor(
         clientId: string,
         clientSecret: string,
         redirectUri: string,
-        store: KVNamespace,
+        store: OAuthStore,
+        stateStore: KVNamespace,
         sentry: Sentry
     ) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
         this.store = store;
+        this.stateStore = stateStore;
         this.sentry = sentry;
     }
 
@@ -94,22 +94,23 @@ export class OAuthClient {
         state: string
     ): Promise<boolean> {
         const stateKey = `state:${state}`;
-        const stateValue = await this.store.get(stateKey);
+        const stateValue = await this.stateStore.get(stateKey);
         if (stateValue === undefined) {
             return false;
         }
 
-        await this.store.delete(stateKey);
+        await this.stateStore.delete(stateKey);
         return true;
     }
 
     public async authorise(): Promise<Response> {
         const state = uuid().toString();
-        await this.store.put(`state:${state}`, "OK", {
+        await this.stateStore.put(`state:${state}`, "OK", {
             expirationTtl: STATE_TTL_SEC,
         });
 
-        const url = new URL(OAUTH_AUTHZ);
+
+        const url = new URL(Routes.oauth2Authorization());
         const params = new URLSearchParams([
             ["response_type", "code"],
             ["client_id", this.clientId.toString()],
@@ -123,10 +124,8 @@ export class OAuthClient {
         return Response.redirect(url.toString());
     }
 
-    public async getToken(
-        code: string
-    ): Promise<AccessTokenResponse | null> {
-        const request = new Request(OAUTH_TOKEN, {
+    public async getToken(code: string): Promise<AccessTokenResponse | null> {
+        const request = new Request(Routes.oauth2TokenExchange(), {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -140,48 +139,57 @@ export class OAuthClient {
             }),
         });
         const response = await fetch(request);
-        const token = await this.upsertToken(response);
+
+        const text = await response.text();
+        if (response.status >= 400) {
+            console.log(`Error: status ${response.status}, ${text}`);
+            return null;
+        }
+
+        const token = await this.upsertToken(text);
         this.sentry.logGetToken(request, response);
         return token;
     }
 
-    public async checkToken(
-        token: string
-    ): Promise<string | null> {
-        const encToken = await tokenStorageKey(token);
-        const record = await this.store.get(`enctoken:${encToken}`);
+    public async checkToken(token: string): Promise<string | null> {
+        const record = await this.store.get(token);
         if (!record) {
             return null;
         }
 
-        const { refreshToken, expiresAt, user } = JSON.parse(record);
-        if (expiresAt > Date.now()) {
+        const { refreshToken, expiresAt } = record;
+        if (expiresAt > new Date()) {
+            // TODO: Cache user info in KV
+            // this.sentry.setUser(user);
+
             // Token is fine, return it.
-            this.sentry.setUser(user);
             return token;
         }
 
         // Refresh token, save to store
-        const newToken = await this.refreshToken(refreshToken);
+        const newToken = await this.refreshToken(token, refreshToken);
         if (!newToken) {
             return null;
         }
 
         // Delete record of old token
-        await this.store.delete(`enctoken:${encToken}`);
+        await this.store.replace(newToken.accessToken, token, { refreshToken, expiresAt, user: newToken.user, });
 
         // Return refreshed token
         return newToken.accessToken;
     }
 
     private async refreshToken(
+        oldAccessToken: string,
         refreshToken: string
     ): Promise<AccessTokenResponse | null> {
-        const request = new Request(OAUTH_TOKEN, {
+        const request = new Request(Routes.oauth2TokenExchange(), {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
+            // NOTE: TS won't let us cast the typed object of this body back to
+            // a Record<string, string>
             body: new URLSearchParams({
                 client_id: this.clientId,
                 client_secret: this.clientSecret,
@@ -191,37 +199,52 @@ export class OAuthClient {
         });
 
         const response = await fetch(request);
-        const token = await this.upsertToken(response);
-
-        this.sentry.logRefresh(request, response);
-
-        return token;
-    }
-
-    private async upsertToken(
-        response: Response
-    ): Promise<AccessTokenResponse | null> {
         const text = await response.text();
         if (response.status >= 400) {
             console.log(`Error: status ${response.status}, ${text}`);
             return null;
         }
 
-        const data = JSON.parse(text);
+        const token = await this.parseRefreshRseponseAndFetchUserId(text);
+        // TODO: Store something more useful than the user ID?
+        await this.store.replace(oldAccessToken, token.accessToken, {
+            expiresAt: new Date(token.expiresAt),
+            refreshToken: token.refreshToken,
+            user: token.user,
+        });
+
+        this.sentry.logRefresh(request, response);
+
+        return token;
+    }
+
+    private async upsertToken(text: string): Promise<AccessTokenResponse | null> {
+        const tokenInfo = await this.parseRefreshRseponseAndFetchUserId(text);
+        const expiresAtDate = new Date(tokenInfo.expiresAt);
+
+        // NOTE: we may now need to set our user in sentry now
+        await this.store.upsert(
+            tokenInfo.accessToken,
+            { expiresAt: expiresAtDate, refreshToken: tokenInfo.refreshToken, user: tokenInfo.user },
+        );
+
+        return tokenInfo;
+    }
+
+    // TODO: Remove the user fetch from this or do something with the info
+    private async parseRefreshRseponseAndFetchUserId(responseText: string): Promise<AccessTokenResponse> {
+        const data = JSON.parse(responseText);
         const expiresIn = data["expires_in"];
         const expiresAt = Date.now() + expiresIn * 1000;
         const accessToken = data["access_token"];
         const refreshToken = data["refresh_token"];
 
         const client = new UserClient(accessToken, this.sentry);
-        // NOTE: This has the side effect of calling sentry.setUser, so no need to
-        // call here.
         const user = await client.getUserInfo();
-        const storageToken = await tokenStorageKey(accessToken);
-        await this.store.put(
-            `enctoken:${storageToken}`,
-            JSON.stringify({ expiresAt, refreshToken, user })
-        );
+        if (!user) {
+            throw new Error("token from refresh invalid");
+        }
+        this.sentry.setUser(user);
 
         return {
             accessToken,
@@ -229,6 +252,7 @@ export class OAuthClient {
             tokenType: data["token_type"],
             expiresAt,
             scope: data["scope"].split(" "),
+            user: user.id,
         };
     }
 }
@@ -243,9 +267,11 @@ const OAUTH_TABLE_NAME = "oauth";
 
 export class OAuthStore {
     qb: D1QB;
+    sentry: Sentry;
 
-    constructor(db: D1Database) {
+    constructor(db: D1Database, sentry: Sentry) {
         this.qb = new D1QB(db);
+        this.sentry = sentry;
     }
 
     private async encode(accessToken: string): Promise<string> {
@@ -253,7 +279,7 @@ export class OAuthStore {
         const tokenBuffer = new TextEncoder().encode(accessToken);
         const hashBuffer = await crypto.subtle.digest("SHA-256", tokenBuffer);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
     }
 
     public async get(accessToken: string): Promise<OAuthRecord | null> {
@@ -300,5 +326,38 @@ export class OAuthStore {
                 },
             },
         });
+    }
+
+    public async replace(oldToken: string, newToken: string, newRecord: OAuthRecord) {
+        const oldHashedToken = await this.encode(oldToken);
+        const hashedToken = await this.encode(newToken);
+
+        const inserted: D1Result = await this.qb.insert({
+            tableName: OAUTH_TABLE_NAME,
+            data: {
+                access_token_hash: hashedToken,
+                refresh_token: newRecord.refreshToken,
+                expires_at: Number(newRecord.expiresAt),
+                user: newRecord.user,
+            },
+        })
+            .execute();
+
+        if (!inserted.success) {
+            this.sentry.sendMessage("failed to insert new token record");
+        }
+
+        const deleted: D1Result = await this.qb.delete({
+            tableName: OAUTH_TABLE_NAME,
+            where: {
+                conditions: "access_token_hash = ?1",
+                params: [oldHashedToken],
+            },
+        })
+            .execute();
+
+        if (!deleted.success) {
+            this.sentry.sendMessage("failed to delete old token hash", "info");
+        }
     }
 }
