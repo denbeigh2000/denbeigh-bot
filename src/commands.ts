@@ -3,7 +3,7 @@ import { ApplicationCommandOptionType } from "discord-api-types/payloads/v10";
 
 import { Env } from "./env";
 import { BotClient, UserClient } from "./discord";
-import { OAuthClient } from "./oauth";
+import { OAuthClient, OAuthStore } from "./oauth";
 import { returnStatus } from "./http";
 import { Sentry } from "./sentry";
 
@@ -189,6 +189,7 @@ export async function handleRegister(
         env.CLIENT_ID,
         env.CLIENT_SECRET,
         env.REDIRECT_URI,
+        env.OAUTH_DB,
         env.OAUTH,
         sentry
     );

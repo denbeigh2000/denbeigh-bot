@@ -8,6 +8,8 @@ import { D1QB, D1ResultOne, D1Result, Raw } from "workers-qb";
 import { Snowflake } from "discord-api-types/globals";
 import { Routes } from "discord-api-types/v10";
 
+const API_BASE_URL = "https://discordapp.com/api"
+
 const SCOPES = [OAuth2Scopes.Identify, OAuth2Scopes.GuildsJoin, OAuth2Scopes.RoleConnectionsWrite];
 const STATE_TTL_SEC = 10 * 60;
 
@@ -49,14 +51,14 @@ export class OAuthClient {
         clientId: string,
         clientSecret: string,
         redirectUri: string,
-        store: OAuthStore,
+        storeDB: D1Database,
         stateStore: KVNamespace,
         sentry: Sentry
     ) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
-        this.store = store;
+        this.store = new OAuthStore(storeDB, sentry);
         this.stateStore = stateStore;
         this.sentry = sentry;
     }
@@ -110,7 +112,7 @@ export class OAuthClient {
         });
 
 
-        const url = new URL(Routes.oauth2Authorization());
+        const url = new URL(API_BASE_URL + Routes.oauth2Authorization());
         const params = new URLSearchParams([
             ["response_type", "code"],
             ["client_id", this.clientId.toString()],
@@ -125,7 +127,7 @@ export class OAuthClient {
     }
 
     public async getToken(code: string): Promise<AccessTokenResponse | null> {
-        const request = new Request(Routes.oauth2TokenExchange(), {
+        const request = new Request(API_BASE_URL + Routes.oauth2TokenExchange(), {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -183,7 +185,7 @@ export class OAuthClient {
         oldAccessToken: string,
         refreshToken: string
     ): Promise<AccessTokenResponse | null> {
-        const request = new Request(Routes.oauth2TokenExchange(), {
+        const request = new Request(API_BASE_URL + Routes.oauth2TokenExchange(), {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -309,7 +311,7 @@ export class OAuthStore {
         const hashedToken = await this.encode(accessToken);
         const expiresNum = Number(record.expiresAt);
 
-        this.qb.insert({
+        await this.qb.insert({
             tableName: OAUTH_TABLE_NAME,
             data: {
                 access_token_hash: hashedToken,
@@ -322,10 +324,10 @@ export class OAuthStore {
                 data: {
                     refresh_token: new Raw("excluded.refresh_token"),
                     expires_at: new Raw("excluded.expires_at"),
-                    user: new Raw("record.user"),
+                    user: new Raw("excluded.user"),
                 },
             },
-        });
+        }).execute();
     }
 
     public async replace(oldToken: string, newToken: string, newRecord: OAuthRecord) {

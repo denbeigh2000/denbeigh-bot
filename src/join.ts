@@ -16,12 +16,11 @@ export async function handleJoin(
         env.CLIENT_ID,
         env.CLIENT_SECRET,
         env.REDIRECT_URI,
+        env.OAUTH_DB,
         env.OAUTH,
         sentry
     );
-    const token = await oauthClient.getRefreshOrAuthorise(
-        req
-    );
+    const token = await oauthClient.getRefreshOrAuthorise(req);
     if (token instanceof Response) {
         return token;
     }
@@ -163,6 +162,7 @@ export async function handleRedirect(
         env.CLIENT_ID,
         env.CLIENT_SECRET,
         env.REDIRECT_URI,
+        env.OAUTH_DB,
         env.OAUTH,
         sentry
     );
