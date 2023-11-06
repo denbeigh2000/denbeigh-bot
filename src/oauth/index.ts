@@ -1,6 +1,5 @@
 import { parse as parseCookie } from "cookie";
 import { OAuth2Scopes } from "discord-api-types/payloads/v10";
-import { uuid } from "@cfworker/uuid";
 
 import { UserClient } from "../discord";
 import { Sentry } from "../sentry";
