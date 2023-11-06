@@ -1,4 +1,4 @@
-import { Router } from "itty-router";
+import { Router, IRequest } from "itty-router";
 
 import { Env } from "./env";
 import { handler as handleJoin } from "./routes/join";
@@ -8,7 +8,9 @@ import { handler as handleRegister } from "./routes/register";
 import { Sentry } from "./sentry";
 import { respondNotFound, returnStatus } from "./util/http";
 
-const ROUTER = Router();
+type RequestType = [Env, ExecutionContext, Sentry];
+
+const ROUTER = Router<IRequest, RequestType>();
 
 ROUTER.get("/join", handleJoin);
 ROUTER.get("/redirect", handleRedirect);
@@ -20,7 +22,7 @@ export default {
     async fetch(
         request: Request,
         env: Env,
-        ctx: FetchEvent
+        ctx: ExecutionContext,
     ): Promise<Response> {
         const sentry = new Sentry(request, env, ctx);
         try {

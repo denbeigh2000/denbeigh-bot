@@ -91,4 +91,3 @@ export function getUserRole(
     validUserRoles.sort((a, b) => a - b);
     return validUserRoles[0];
 }
-

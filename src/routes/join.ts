@@ -10,7 +10,7 @@ import { returnStatus } from "../util/http";
 export async function handler(
     req: Request,
     env: Env,
-    _ctx: FetchEvent,
+    _ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<Response> {
     const oauthClient = new OAuthClient(

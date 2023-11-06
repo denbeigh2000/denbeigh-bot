@@ -41,7 +41,7 @@ export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _ctx: FetchEvent,
+    _ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody | null> {
     const { options } = interaction.data;

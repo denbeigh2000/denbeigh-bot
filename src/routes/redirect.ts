@@ -6,7 +6,7 @@ import { respond400 } from "../util/http";
 export async function handler(
     req: Request,
     env: Env,
-    _ctx: FetchEvent,
+    _ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<Response> {
     const url = new URL(req.url);

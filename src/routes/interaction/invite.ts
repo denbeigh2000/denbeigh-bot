@@ -54,7 +54,7 @@ export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _ctx: FetchEvent,
+    _ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
     /* TODO: Most of this block should be factored out */

@@ -23,7 +23,7 @@ const ALL_COMMANDS = [
 export async function handler(
     req: Request,
     env: Env,
-    _ctx: FetchEvent,
+    _ctx: ExecutionContext,
     sentry: Sentry
 ) {
     const oauthClient = new OAuthClient(

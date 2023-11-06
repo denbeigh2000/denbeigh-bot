@@ -22,7 +22,7 @@ import { handler as handleHelp } from "./help";
 export async function handler(
     request: Request,
     env: Env,
-    ctx: FetchEvent,
+    ctx: ExecutionContext,
     sentry: Sentry
 ) {
     const body = await request.text();
@@ -117,7 +117,7 @@ async function handleCommand(
     commandType: CommandType,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    ctx: FetchEvent,
+    ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody | null> {
     const client = new BotClient(env.BOT_TOKEN, sentry);
@@ -140,7 +140,7 @@ async function handleCommand(
 async function handleMessageComponent(
     interaction: APIMessageComponentSelectMenuInteraction,
     env: Env,
-    _ctx: FetchEvent,
+    _ctx: ExecutionContext,
     sentry: Sentry
 ) {
     const customId = interaction.data.custom_id;
