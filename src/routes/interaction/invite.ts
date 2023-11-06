@@ -3,16 +3,13 @@ import {
     ApplicationCommandOptionType,
     MessageFlags,
 } from "discord-api-types/payloads/v10";
-import {
-    Env,
-    Roles,
-    getRoleIDFromRole,
-    getRoleFromRoleID,
-} from "../../env";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
+import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+
+import { Env } from "../../env";
+import { Roles, getRoleIDFromRole, getRoleFromRoleID } from "../../users";
 import { BotClient } from "../../discord/client";
 import { Sentry } from "../../sentry";
-import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 
 const USERNAME_PATTERN = /^^.+#[0-9]{4}$/;
 

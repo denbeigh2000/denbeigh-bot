@@ -5,13 +5,10 @@ import {
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+
 import { BotClient } from "../../discord/client";
-import {
-    Env,
-    getRoleFromRoleID,
-    getRoleIDFromRole,
-    Roles,
-} from "../../env";
+import { Env } from "../../env";
+import { getRoleFromRoleID, getRoleIDFromRole, Roles } from "../../users";
 import { Sentry } from "../../sentry";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =

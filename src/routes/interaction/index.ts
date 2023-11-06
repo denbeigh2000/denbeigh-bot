@@ -8,7 +8,8 @@ import {
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
 import { BotClient } from "../../discord/client";
 import verify from "../../discord/verify";
-import { Env, Roles, getRoleIDFromRole, getUserRole } from "../../env";
+import { Env } from "../../env";
+import { Roles, getRoleIDFromRole, getUserRole } from "../../users";
 import { Sentry } from "../../sentry";
 import { returnJSON, returnStatus } from "../../util/http";
 
