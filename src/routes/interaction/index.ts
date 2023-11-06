@@ -6,11 +6,11 @@ import {
     MessageFlags,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
-import { BotClient, getUserRole } from "../discord";
-import { Env, getRoleIDFromRole, Roles } from "../env";
-import { returnJSON, returnStatus } from "../http";
-import { Sentry } from "../sentry";
-import verify from "../verify";
+import { BotClient } from "../../discord/client";
+import verify from "../../discord/verify";
+import { Env, Roles, getRoleIDFromRole, getUserRole } from "../../env";
+import { Sentry } from "../../sentry";
+import { returnJSON, returnStatus } from "../../util/http";
 
 import { handler as handleGroup } from "./group";
 import { handler as handleInvite } from "./invite";
@@ -19,7 +19,7 @@ import { handler as handlePromote } from "./promote";
 import { handler as handlePing } from "./ping";
 import { handler as handleHelp } from "./help";
 
-export async function handleInteraction(
+export async function handler(
     request: Request,
     env: Env,
     ctx: FetchEvent,

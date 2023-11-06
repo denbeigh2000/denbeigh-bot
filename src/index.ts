@@ -1,10 +1,12 @@
 import { Router } from "itty-router";
 
 import { Env } from "./env";
-import { respondNotFound, returnStatus } from "./http";
-import { handleJoin, handleRedirect } from "./join"; import { handleInteraction } from "./interaction";
-import { handleRegister } from "./commands";
+import { handler as handleJoin } from "./routes/join";
+import { handler as handleRedirect } from "./routes/redirect";
+import { handler as handleInteraction } from "./routes/interaction";
+import { handler as handleRegister } from "./routes/register";
 import { Sentry } from "./sentry";
+import { respondNotFound, returnStatus } from "./util/http";
 
 const ROUTER = Router();
 

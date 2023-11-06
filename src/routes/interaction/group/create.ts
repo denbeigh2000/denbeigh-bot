@@ -1,4 +1,4 @@
-import { GroupManager } from "../../groups";
+import { GroupManager } from "./manager";
 import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, MessageFlags, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {

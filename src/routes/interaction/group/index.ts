@@ -5,11 +5,11 @@ import {
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 
-import { BotClient } from "../../discord";
-import { Env } from "../../env";
-import { Sentry } from "../../sentry";
-import { GroupManager } from "../../groups";
+import { BotClient } from "../../../discord/client";
+import { Env } from "../../../env";
+import { Sentry } from "../../../sentry";
 
+import { GroupManager } from "./manager";
 import { handler as createHandler, subcommand as createSubcommand } from "./create";
 import { handler as deleteHandler, subcommand as deleteSubcommand } from "./delete";
 import { handler as leaveHandler, subcommand as leaveSubcommand } from "./leave";

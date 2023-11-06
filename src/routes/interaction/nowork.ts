@@ -6,9 +6,9 @@ import {
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
-import { BotClient } from "../discord";
-import { Env } from "../env";
-import { Sentry } from "../sentry";
+import { BotClient } from "../../discord/client";
+import { Env } from "../../env";
+import { Sentry } from "../../sentry";
 
 function buildMessage(user: Snowflake | null) {
     const formattedUser = user

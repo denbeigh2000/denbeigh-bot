@@ -1,26 +1,27 @@
+import { GroupManager } from "./manager";
 import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, MessageFlags, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
-import { GroupManager } from "../../groups";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
-    name: "leave",
-    description: "Leave a group you're currently in",
+    name: "join",
+    description: "Join an existing group",
     options: [
         {
             type: ApplicationCommandOptionType.String,
             name: "name",
-            description: "The name of the group to leave",
+            description: "The name of the group to join",
             required: true,
         },
     ],
 };
+
 
 export const handler = async (
     manager: GroupManager,
     name: string,
     userId: string
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> => {
-    const group = await manager.leaveGroup(name, userId);
+    const group = await manager.joinGroup(name, userId);
     if (!group) {
         return {
             content: `No group named \`${name}\``,
@@ -29,7 +30,8 @@ export const handler = async (
     }
 
     return {
-        content: `Removed you from <@&${group.roleId}>`,
+        content: `Added you to <@&${group.roleId}>`,
         flags: MessageFlags.Ephemeral,
     };
-};
+}
+

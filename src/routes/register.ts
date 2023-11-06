@@ -1,8 +1,8 @@
-import { Env } from "./env";
-import { BotClient, UserClient } from "./discord";
-import { OAuthClient } from "./oauth";
-import { returnStatus } from "./http";
-import { Sentry } from "./sentry";
+import { Env } from "../env";
+import { BotClient, UserClient } from "../discord/client";
+import { OAuthClient } from "../discord/oauth";
+import { Sentry } from "../sentry";
+import { returnStatus } from "../util/http";
 
 import { command as InviteCommand } from "./interaction/invite";
 import { command as GroupCommand } from "./interaction/group";
@@ -20,7 +20,7 @@ const ALL_COMMANDS = [
     HelpCommand,
 ];
 
-export async function handleRegister(
+export async function handler(
     req: Request,
     env: Env,
     _ctx: FetchEvent,
