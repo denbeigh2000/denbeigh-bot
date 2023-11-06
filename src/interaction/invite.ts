@@ -1,6 +1,7 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
     ApplicationCommandOptionType,
+    MessageFlags,
 } from "discord-api-types/payloads/v10";
 import {
     Env,
@@ -22,12 +23,12 @@ export async function handleInvite(
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
     /* TODO: Most of this block should be factored out */
-    const ephFlags = { flags: MessageFlags.Ephemeral };
+    const errEphFlags = { flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in promote command";
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, ...ephFlags };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, ...errEphFlags };
     }
 
     const awarder = interaction.member!.user.id;
@@ -49,8 +50,8 @@ export async function handleInvite(
 
     if (!username || !role) {
         const msg = `Missing one of username (${username}) or role id (${role})`;
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, ...ephFlags };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, };
     }
 
     if (!username.match(USERNAME_PATTERN)) {
@@ -71,7 +72,7 @@ export async function handleInvite(
         return {
             content:
                 "You do not have sufficient privileges to award this role",
-            ...ephFlags,
+            ...errEphFlags,
         };
     }
 
@@ -91,6 +92,6 @@ export async function handleInvite(
             `OK, \`${username}\` can join with the <@&${roleId}> role.`,
             "Send invite link: https://discord.denb.ee/join",
         ].join("\n\n"),
-        ...ephFlags,
+        flags: MessageFlags.Ephemeral,
     };
 }

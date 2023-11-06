@@ -24,7 +24,7 @@ export default {
         try {
             return await ROUTER.handle(request, env, ctx, sentry);
         } catch (e) {
-            sentry.sendException(e as Error);
+            sentry.captureException(e);
             return returnStatus(500, "Internal Error");
         }
     },

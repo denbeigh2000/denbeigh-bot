@@ -3,7 +3,7 @@ import { ApplicationCommandOptionType } from "discord-api-types/payloads/v10";
 
 import { Env } from "./env";
 import { BotClient, UserClient } from "./discord";
-import { OAuthClient, OAuthStore } from "./oauth";
+import { OAuthClient } from "./oauth";
 import { returnStatus } from "./http";
 import { Sentry } from "./sentry";
 

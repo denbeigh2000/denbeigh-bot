@@ -85,7 +85,7 @@ export async function handleInteraction(
                 data: msg,
             });
         default:
-            sentry.sendMessage(
+            sentry.captureMessage(
                 `Unhandled interaction type ${interaction.type}`,
                 "warning"
             );
@@ -117,7 +117,7 @@ export function identifyCommand(
         case CommandType.PING:
             return name;
         default:
-            sentry.sendMessage(
+            sentry.captureMessage(
                 `unhandled command ${name}`,
                 "error"
             );
@@ -157,7 +157,7 @@ async function handleMessageComponent(
 ) {
     const customId = interaction.data.custom_id;
     if (!customId.startsWith("action_")) {
-        sentry.sendMessage(
+        sentry.captureMessage(
             `Unhandled custom_id: ${customId}`,
             "warning"
         );
@@ -189,7 +189,7 @@ async function handleMessageComponent(
             role = Roles.Moderator;
             break;
         default:
-            sentry.sendMessage(
+            sentry.captureMessage(
                 `unhandled select value ${action}`,
                 "warning"
             );

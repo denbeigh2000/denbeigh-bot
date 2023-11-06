@@ -24,7 +24,7 @@ export async function handlePromote(
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in promote command";
-        sentry.sendMessage(msg, "warning");
+        sentry.captureMessage(msg, "warning");
         return { content: msg, ...ephFlags };
     }
 
@@ -47,7 +47,7 @@ export async function handlePromote(
 
     if (!userId || !role) {
         const msg = `Missing one of user id (${userId}) or role id (${role})`;
-        sentry.sendMessage(msg, "warning");
+        sentry.captureMessage(msg, "warning");
         return { content: msg, ...ephFlags };
     }
 

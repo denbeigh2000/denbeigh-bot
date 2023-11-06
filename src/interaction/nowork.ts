@@ -36,14 +36,14 @@ export async function handleNoWork(
     } else if (options.length === 1) {
         const opt = options[0];
         if (opt.type !== ApplicationCommandOptionType.User) {
-            return { content: `Bad option type: ${opt.type}`, flags: MessageFlags.Ephemeral };
+            return { content: `Bad option type: ${opt.type}`, flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
         }
 
         user = opt.value;
     } else {
         const msg = "Too many options given";
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, flags: MessageFlags.Ephemeral };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
     }
 
     const content = buildMessage(user);

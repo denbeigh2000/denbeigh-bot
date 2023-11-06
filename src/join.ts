@@ -5,6 +5,7 @@ import { Env, getRoleIDFromRole } from "./env";
 import { respond400, returnStatus } from "./http";
 import { OAuthClient } from "./oauth";
 import { Sentry } from "./sentry";
+import { formatUser } from "./util";
 
 export async function handleJoin(
     req: Request,
@@ -34,7 +35,6 @@ export async function handleJoin(
     }
 
     const botClient = new BotClient(env.BOT_TOKEN, sentry);
-
     const guildMember = await botClient.getGuildMember(
         env.GUILD_ID,
         user.id
@@ -46,7 +46,7 @@ export async function handleJoin(
         );
     }
 
-    const username = `${user.username}#${user.discriminator}`;
+    const username = formatUser(user);
     let applyRole: string | null = null;
 
     const preauthKey = `preauth:${username}`;
@@ -86,7 +86,7 @@ async function postPendingMessage(
 ) {
     await botClient.createMessage(env.PENDING_CHANNEL, {
         content: [
-            `\`${user.username}#${user.discriminator}\` has joined the waiting room.`,
+            `\`${formatUser(user)}\` has joined the waiting room.`,
             `What would you like to do?`,
             `<@&${env.MOD_ROLE}>`,
         ].join("\n\n"),

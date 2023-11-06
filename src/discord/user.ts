@@ -11,6 +11,9 @@ export class UserClient extends Client {
     public async getUserInfo(): Promise<APIUser | null> {
         const route = Routes.user("@me");
         const user = await this.rest.get(route) as RESTGetAPICurrentUserResult;
+        if (user) {
+            this.sentry.setFromDiscordUser(user);
+        }
         return user || null;
     }
 }

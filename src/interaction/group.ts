@@ -10,8 +10,6 @@ import { Sentry } from "../sentry";
 
 import { GroupManager } from "../groups";
 
-const EPH_FLAGS = { flags: MessageFlags.Ephemeral };
-
 export async function handleGroup(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
@@ -27,31 +25,33 @@ export async function handleGroup(
         env.GUEST_ROLE
     );
 
+    const flags = MessageFlags.Ephemeral & MessageFlags.Urgent;
+
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in group command";
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, ...EPH_FLAGS };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, flags };
     }
 
     const user = interaction.member!.user.id;
     if (options.length !== 1) {
         const msg = `Unexpected number of elements ${options.length}`;
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, ...EPH_FLAGS };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, flags };
     }
 
     const option = options[0];
     if (option.type !== ApplicationCommandOptionType.Subcommand) {
         const msg = `Unexpected option type${option.type}`;
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, ...EPH_FLAGS };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, flags };
     }
 
     if (!option.options) {
         const msg = "No options in subcommand";
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, ...EPH_FLAGS };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, flags };
     }
 
     const subcommandName = option.name;
@@ -61,8 +61,8 @@ export async function handleGroup(
 
     if (option.options.length !== 1) {
         const msg = `Expected exactly 1 option, got ${option.options.length}`;
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, ...EPH_FLAGS };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, flags };
     }
     const subOption = option.options[0];
     if (
@@ -70,8 +70,8 @@ export async function handleGroup(
         subOption.name !== "name"
     ) {
         const msg = `Unexpected option ${subOption}, expected a string with name "name"`;
-        sentry.sendMessage(msg, "warning");
-        return { content: msg, ...EPH_FLAGS };
+        sentry.captureMessage(msg, "warning");
+        return { content: msg, flags };
     }
 
     const groupName = subOption.value;
@@ -86,10 +86,7 @@ export async function handleGroup(
         case "delete":
             return await handleDeleteGroup(manager, groupName, user);
         default:
-            return {
-                content: `Unknown command ${option.name}`,
-                ...EPH_FLAGS,
-            };
+            return { content: `Unknown command ${option.name}`, flags };
     }
 }
 
@@ -99,10 +96,11 @@ async function handleCreateGroup(
     userId: string
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
     const user = await manager.getGuildMember(userId);
+    const flags = MessageFlags.Ephemeral & MessageFlags.Urgent;
     if (!user) {
         return {
             content: "You are not in this guild (somehow??)",
-            ...EPH_FLAGS,
+            flags,
         };
     }
 
@@ -114,7 +112,7 @@ async function handleCreateGroup(
     ) {
         return {
             content: "You are not authorised to create roles",
-            ...EPH_FLAGS,
+            flags,
         };
     }
 
@@ -122,7 +120,7 @@ async function handleCreateGroup(
     if (existing) {
         return {
             content: `Group already exists: <@&${newGroup.roleId}>`,
-            ...EPH_FLAGS,
+            flags,
         };
     }
 
@@ -131,7 +129,7 @@ async function handleCreateGroup(
             `Created <@&${newGroup.roleId}>`,
             `Join it with \`/group join name:${newGroup.name}\``,
         ].join("\n"),
-        ...EPH_FLAGS,
+        flags: MessageFlags.Ephemeral
     };
 }
 
@@ -144,13 +142,13 @@ async function handleJoinGroup(
     if (!group) {
         return {
             content: `No group named \`${name}\``,
-            ...EPH_FLAGS,
+            flags: MessageFlags.Ephemeral & MessageFlags.Urgent,
         };
     }
 
     return {
         content: `Added you to <@&${group.roleId}>`,
-        ...EPH_FLAGS,
+        flags: MessageFlags.Ephemeral,
     };
 }
 
@@ -163,13 +161,13 @@ async function handleLeaveGroup(
     if (!group) {
         return {
             content: `No group named \`${name}\``,
-            ...EPH_FLAGS,
+            flags: MessageFlags.Ephemeral & MessageFlags.Urgent,
         };
     }
 
     return {
         content: `Removed you from <@&${group.roleId}>`,
-        ...EPH_FLAGS,
+        flags: MessageFlags.Ephemeral,
     };
 }
 
@@ -178,11 +176,12 @@ async function handleDeleteGroup(
     name: string,
     userId: string
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
+    const flags = MessageFlags.Ephemeral & MessageFlags.Urgent;
     const user = await manager.getGuildMember(userId);
     if (!user) {
         return {
             content: "You are not in this guild (somehow??)",
-            ...EPH_FLAGS,
+            flags,
         };
     }
 
@@ -194,7 +193,7 @@ async function handleDeleteGroup(
     ) {
         return {
             content: "You are not authorised to delete roles",
-            ...EPH_FLAGS,
+            flags,
         };
     }
 
@@ -202,13 +201,13 @@ async function handleDeleteGroup(
     if (!deletedGroup) {
         return {
             content: `No group named \`${name}\``,
-            ...EPH_FLAGS,
+            flags,
         };
     }
 
     return {
         content: `Deleted group \`${name}\``,
-        ...EPH_FLAGS,
+        flags: MessageFlags.Ephemeral,
     };
 }
 
@@ -219,16 +218,16 @@ async function handleListGroups(
     if (groups.length === 0) {
         return {
             content: "There are no groups yet!",
-            ...EPH_FLAGS,
+            flags: MessageFlags.Ephemeral,
         };
     }
 
     groups.sort((a, b) => (a.name > b.name ? 1 : -1));
-    let msg = "Groups:\n```\n";
+    let content = "Groups:\n```\n";
     for (const group of groups) {
-        msg += `- ${group.name}\n`;
+        content += `- ${group.name}\n`;
     }
-    msg += "```\n";
+    content += "```\n";
 
-    return { content: msg, ...EPH_FLAGS };
+    return { content, flags: MessageFlags.Ephemeral };
 }

@@ -1,17 +1,16 @@
 import { parse as parseCookie } from "cookie";
 import { OAuth2Scopes } from "discord-api-types/payloads/v10";
+import { Snowflake } from "discord-api-types/globals";
+import { Routes } from "discord-api-types/v10";
 
 import { UserClient } from "../discord";
 import { Sentry } from "../sentry";
-import { Snowflake } from "discord-api-types/globals";
-import { Routes } from "discord-api-types/v10";
 import { TokenStore } from "./tokenstore";
 import { StateStore } from "./statestore";
 
 const API_BASE_URL = "https://discordapp.com/api"
 
 const SCOPES = [OAuth2Scopes.Identify, OAuth2Scopes.GuildsJoin, OAuth2Scopes.RoleConnectionsWrite];
-const STATE_TTL_SEC = 10 * 60;
 
 export async function tokenStorageKey(accessToken: string): Promise<string> {
     // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#converting_a_digest_to_a_hex_string
@@ -129,6 +128,8 @@ export class OAuthClient {
             }),
         });
         const response = await fetch(request);
+        this.sentry.breadcrumbFromHTTP("getting oauth token", request.url, response);
+        this.sentry.captureMessage("getting discord token", "debug");
 
         const text = await response.text();
         if (response.status >= 400) {
@@ -137,7 +138,6 @@ export class OAuthClient {
         }
 
         const token = await this.upsertToken(text);
-        this.sentry.logGetToken(request, response);
         return token;
     }
 
@@ -200,7 +200,7 @@ export class OAuthClient {
             user: token.user,
         });
 
-        this.sentry.logRefresh(request, response);
+        this.sentry.breadcrumbFromHTTP("refreshing oauth token", request.url, response);
 
         return token;
     }
@@ -231,7 +231,6 @@ export class OAuthClient {
         if (!user) {
             throw new Error("token from refresh invalid");
         }
-        this.sentry.setUser(user);
 
         return {
             accessToken,

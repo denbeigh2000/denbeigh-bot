@@ -1,101 +1,90 @@
-import { APIUser } from "discord-api-types/payloads/v10";
-import { Breadcrumb, Extra, Extras } from "@sentry/types";
-import Toucan, { Level } from "toucan-js";
-
+import { APIInteraction, APIUser, InteractionType } from "discord-api-types/payloads/v10";
+import { Toucan, RequestData, LinkedErrors } from "toucan-js";
 import { Env } from "./env";
-import { tag } from "../version.json";
+import { formatUser } from "./util";
 
 export interface BuildkiteErrorShape {
     message: string,
     errors: any[],
 }
 
-function formatUser(user: APIUser): string {
-    return user.discriminator !== "0"
-        ? `${user.username}#${user.discriminator}`
-        : user.username;
-}
+export class Sentry extends Toucan {
+    constructor(request: Request, env: Env, context: ExecutionContext) {
+        const allowedHeaders = ["X-GitHub-Event", "X-GitHub-Hook-ID", "User-Agent"]
 
-export class Sentry {
-    private client: Toucan;
-
-    constructor(request: Request, env: Env, context: FetchEvent) {
-        this.client = new Toucan({
-            allowedHeaders: ["user-agent"],
+        super({
             context,
+            request,
             dsn: env.SENTRY_DSN,
             environment: env.ENVIRONMENT,
-            request,
-            release: tag,
+            enableTracing: true,
+
+            integrations: [
+                new RequestData({ allowedHeaders }),
+                new LinkedErrors(),
+            ],
+        });
+
+        const ghEvent = request.headers.get("X-GitHub-Event");
+        if (ghEvent) {
+            this.setTag("githubEvent", ghEvent);
+        }
+    }
+
+    public setFromDiscordUser(user: APIUser) {
+        this.setTags({
+            "user_id": user.id,
+            "username": formatUser(user),
         });
     }
 
-    public setUser(user: APIUser) {
-        this.client.setUser({
-            id: user.id,
-            username: formatUser(user),
-        });
+    public setFromDiscordInteraction(interaction: APIInteraction) {
+        const guildID = interaction.guild_id || null;
+        const tags: any = {
+            isDM: !guildID,
+            guildID,
+            interactionType: interaction.type,
+        };
+
+        // Integer types are not easy to understand when reading Sentry.
+        switch (interaction.type) {
+            case InteractionType.ApplicationCommand:
+                tags.command = interaction.data.name;
+                tags.interactionType = "command";
+                break;
+            case InteractionType.Ping:
+                tags.interactionType = "ping";
+                break;
+            case InteractionType.ModalSubmit:
+                tags.interactionType = "submit"
+                break;
+            case InteractionType.MessageComponent:
+                tags.interactionType = "component";
+                break;
+            case InteractionType.ApplicationCommandAutocomplete:
+                tags.interactionType = "autocomplete";
+                break;
+        }
+
+        this.setTags(tags);
     }
 
-    public sendException(exception: Error) {
-        this.client.captureException(exception);
-    }
-
-    public sendMessage(message: string, level: Level = "info") {
-        this.client.captureMessage(message, level);
-    }
-
-    public addBreadcrumb(breadcrumb: Breadcrumb) {
-        this.client.addBreadcrumb(breadcrumb);
-    }
-
-    private logHttp(
-        message: string,
-        category: string,
-        request: Request,
-        response: Response
-    ) {
-        this.client.addBreadcrumb({
-            timestamp: Date.now(),
-            message,
+    public breadcrumbFromHTTP(category: string, url: string, response: Response, extra?: any) {
+        const level = response.status >= 400 ? "error" : "info";
+        this.addBreadcrumb({
+            type: "webRequest",
+            level,
             category,
-            type: "http",
             data: {
-                url: request.url,
-                method: request.method,
-                status_code: response.status,
-                reason: response.statusText,
+                url,
+                extra,
+                responseCode: response.status,
             },
         });
-    }
 
-    private logHttpMessage(noun: string, response: Response) {
-        const { status } = response;
-        const success = status < 300;
-
-        this.client.setExtras({ success, status });
-
-        const extra = success ? "" : " failed";
-        const level = success ? "info" : "warning";
-
-        this.client.captureMessage(`${noun}${extra}`, level);
-    }
-
-    public logRefresh(request: Request, response: Response) {
-        this.logHttp("Refreshing token", "oauth", request, response);
-        this.logHttpMessage("Token refresh", response);
-    }
-
-    public logGetToken(request: Request, response: Response) {
-        this.logHttp("Getting new token", "oauth", request, response);
-        this.logHttpMessage("Token creation", response);
-    }
-
-    public setExtra(key: string, value: Extra) {
-        this.client.setExtra(key, value);
-    }
-
-    public setExtras(extras: Extras) {
-        this.client.setExtras(extras);
+        // NOTE: Could be noisy re: people with bans?
+        if (response.status >= 400) {
+            this.captureMessage(`HTTP error ${response.status}`, "error");
+        }
     }
 }

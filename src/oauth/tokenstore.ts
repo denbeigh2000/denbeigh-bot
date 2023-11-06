@@ -90,7 +90,7 @@ export class TokenStore {
             .execute();
 
         if (!inserted.success) {
-            this.sentry.sendMessage("failed to insert new token record");
+            this.sentry.captureMessage("failed to insert new token record", "error");
         }
 
         const deleted: D1Result = await this.qb.delete({
@@ -103,7 +103,7 @@ export class TokenStore {
             .execute();
 
         if (!deleted.success) {
-            this.sentry.sendMessage("failed to delete old token hash", "info");
+            this.sentry.captureMessage("failed to delete old token hash", "info");
         }
     }
 }
