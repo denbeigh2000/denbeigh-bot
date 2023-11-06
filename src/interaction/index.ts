@@ -12,24 +12,12 @@ import { returnJSON, returnStatus } from "../http";
 import { Sentry } from "../sentry";
 import verify from "../verify";
 
-import { handleGroup } from "./group";
-import { handleInvite } from "./invite";
-import { handleNoWork } from "./nowork";
-import { handlePromote } from "./promote";
-
-const HELP_TEXT = `
-\`/group list\`: List open groups
-\`/group join <name>\`: Join a group
-\`/group leave <name>\`: Leave a group
-\`/group create <name>\`: Create a new group
-\`/group delete <name>\`: Delete a group
-
-\`/invite <username> <role>\`: Pre-authorise a new member (role limits apply)
-\`/promote <username> <role\`: Change a user's membership level (role limits apply)
-
-\`/ping\`: Ping!
-\`/help\`: Show this help information
-`.trim();
+import { handler as handleGroup } from "./group";
+import { handler as handleInvite } from "./invite";
+import { handler as handleNoWork } from "./nowork";
+import { handler as handlePromote } from "./promote";
+import { handler as handlePing } from "./ping";
+import { handler as handleHelp } from "./help";
 
 export async function handleInteraction(
     request: Request,
@@ -143,9 +131,9 @@ async function handleCommand(
         case CommandType.NOWORK:
             return await handleNoWork(client, interaction, env, ctx, sentry);
         case CommandType.HELP:
-            return { content: HELP_TEXT, flags: MessageFlags.Ephemeral };
+            return handleHelp();
         case CommandType.PING:
-            return { content: "Pong", flags: MessageFlags.Ephemeral };
+            return handlePing();
     }
 }
 

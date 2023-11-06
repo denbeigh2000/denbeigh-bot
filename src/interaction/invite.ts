@@ -12,10 +12,45 @@ import {
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { BotClient } from "../discord";
 import { Sentry } from "../sentry";
+import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 
 const USERNAME_PATTERN = /^^.+#[0-9]{4}$/;
 
-export async function handleInvite(
+export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
+    name: "invite",
+    description: "Pre-approve a user to this server",
+    options: [
+        {
+            type: ApplicationCommandOptionType.String,
+            name: "username",
+            description:
+                "Username of the user to invite (e.g., User#0001)",
+            required: true,
+        },
+        {
+            type: ApplicationCommandOptionType.Integer,
+            name: "role",
+            description: "Role to give the new user",
+            choices: [
+                {
+                    name: "Guest",
+                    value: 10,
+                },
+                {
+                    name: "Member",
+                    value: 20,
+                },
+                {
+                    name: "Moderator",
+                    value: 30,
+                },
+            ],
+            required: true,
+        },
+    ],
+}
+
+export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,

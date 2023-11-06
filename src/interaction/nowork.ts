@@ -5,6 +5,7 @@ import {
     MessageFlags,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
+import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 import { BotClient } from "../discord";
 import { Env } from "../env";
 import { Sentry } from "../sentry";
@@ -22,7 +23,21 @@ Official support channels:
 `;
 }
 
-export async function handleNoWork(
+export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
+{
+    name: "nowork",
+    description: "Remind the chat of the no-work policy.",
+    options: [
+        {
+            type: ApplicationCommandOptionType.User,
+            name: "user",
+            description: "User to direct reminder to",
+            required: false,
+        },
+    ],
+};
+
+export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,

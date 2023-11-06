@@ -4,6 +4,7 @@ import {
     MessageFlags,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
+import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 import { BotClient } from "../discord";
 import {
     Env,
@@ -13,7 +14,41 @@ import {
 } from "../env";
 import { Sentry } from "../sentry";
 
-export async function handlePromote(
+export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
+{
+    name: "promote",
+    description: "Sets the role of another user",
+    options: [
+        {
+            type: ApplicationCommandOptionType.User,
+            name: "user",
+            description: "User to apply role to",
+            required: true,
+        },
+        {
+            type: ApplicationCommandOptionType.Integer,
+            name: "role",
+            description: "New role to set",
+            choices: [
+                {
+                    name: "Guest",
+                    value: 10,
+                },
+                {
+                    name: "Member",
+                    value: 20,
+                },
+                {
+                    name: "Moderator",
+                    value: 30,
+                },
+            ],
+            required: true,
+        },
+    ],
+}
+
+export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
