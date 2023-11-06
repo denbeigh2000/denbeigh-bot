@@ -3,8 +3,8 @@ import { OAuth2Scopes } from "discord-api-types/payloads/v10";
 import { Snowflake } from "discord-api-types/globals";
 import { Routes } from "discord-api-types/v10";
 
-import { UserClient } from "../discord";
-import { Sentry } from "../sentry";
+import { UserClient } from "../client";
+import { Sentry } from "../../sentry";
 import { TokenStore } from "./tokenstore";
 import { StateStore } from "./statestore";
 

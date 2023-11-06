@@ -1,7 +1,7 @@
 import { Snowflake } from "discord-api-types/v10";
 import { D1QB, D1Result, D1ResultOne, Raw } from "workers-qb";
 
-import { Sentry } from "../sentry";
+import { Sentry } from "../../sentry";
 
 const TABLE_NAME = "oauth";
 

@@ -41,8 +41,8 @@ import {
     RESTPutAPIGuildMemberRoleResult,
 } from "discord-api-types/rest/v10/guild";
 
-import { Client } from "./client";
-import { Sentry } from "../../src/sentry";
+import { Client } from "./base";
+import { Sentry } from "../../sentry";
 
 export class BotClient extends Client {
     constructor(token: string, sentry: Sentry) {
