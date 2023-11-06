@@ -38,9 +38,9 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 };
 
 export async function handler(
-    client: BotClient,
+    _client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
-    env: Env,
+    _env: Env,
     _ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody | null> {
@@ -51,7 +51,9 @@ export async function handler(
     } else if (options.length === 1) {
         const opt = options[0];
         if (opt.type !== ApplicationCommandOptionType.User) {
-            return { content: `Bad option type: ${opt.type}`, flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
+            const msg = `Bad option type: ${opt.type}`;
+            sentry.captureMessage(msg, "warning");
+            return { content: msg, flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
         }
 
         user = opt.value;
