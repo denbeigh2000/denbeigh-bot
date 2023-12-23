@@ -9,6 +9,11 @@ kv_namespaces = [
     { binding = "OAUTH", id = "", preview_id = "" }
 ]
 
+d1_databases = [
+    { binding = "OAUTH_DB", database_name = "", database_id = "00000000-0000-0000-0000-000000000000" }
+]
+
+
 [env.production.vars]
 # Expected secrets, managed outside of wrangler.toml:
 # BOT_TOKEN
@@ -36,6 +41,10 @@ ENVIRONMENT = "prod"
 [env.dev]
 kv_namespaces = [
     { binding = "OAUTH", id = "", preview_id = "" }
+]
+
+d1_databases = [
+    { binding = "OAUTH_DB", database_name = "", database_id = "00000000-0000-0000-0000-000000000000" }
 ]
 
 [env.dev.vars]
