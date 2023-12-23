@@ -19,8 +19,8 @@ export const subcommand: APIApplicationCommandSubcommandOption = {
 export const handler = async (
     manager: GroupManager,
     name: string,
-    userId: string
-): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
+    userId: string,
+): Promise<RESTPostAPIWebhookWithTokenJSONBody> => {
     const flags = MessageFlags.Ephemeral & MessageFlags.Urgent;
     const user = await manager.getGuildMember(userId);
     if (!user) {
