@@ -3,6 +3,7 @@
 , devPackages
 , yarn
 , sentry-cli
+, nixVersions
 , pre-commit
 , age
 , yarn2nix-moretea
@@ -28,6 +29,7 @@ in
       yarn
       sentry-cli
       pre-commit
+      nixVersions.nix_2_17
     ];
   };
 
