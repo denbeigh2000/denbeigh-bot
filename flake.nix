@@ -34,7 +34,7 @@
       {
         apps.releaseTool = {
           type = "app";
-          program = "${releaseTool}";
+          program = "${releaseTool}/bin/release";
         };
 
         devShells = {
