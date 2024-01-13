@@ -1,7 +1,7 @@
 ENV="${1:-staging}"
 TAG="${2:-}"
 
-"$WRANGLER_BIN" --version 2>&1 >/dev/null
+"$WRANGLER_BIN" --version >/dev/null 2>&1
 
 IDENTITY_FILE="${IDENTITY_FILE:-}"
 if [[ -z "$IDENTITY_FILE" ]]
@@ -18,31 +18,33 @@ fi
 # Expected vars:
 #  - CLOUDFLARE_ACCOUNT_ID
 #  - CLOUDFLARE_API_TOKEN
-CLOUDFLARE_SECRETS_FILE="$("$GIT_BIN" ls-files ":/secrets/cf_authn.sh.age")"
+CLOUDFLARE_SECRETS_FILE="$(git ls-files ":/secrets/cf_authn.sh.age")"
 CLOUDFLARE_ENV_FILE="$(mktemp)"
-"$AGE_BIN" --decrypt --identity "$IDENTITY_FILE" --output "$CLOUDFLARE_ENV_FILE" "$CLOUDFLARE_SECRETS_FILE"
+age --decrypt --identity "$IDENTITY_FILE" --output "$CLOUDFLARE_ENV_FILE" "$CLOUDFLARE_SECRETS_FILE"
 
 # Load our config directly from our encrypted config file
 # This is passed in as a file later via a tempfile
-WRANGLER_SECRETS_FILE="$("$GIT_BIN" ls-files ":/secrets/wrangler.toml.age")"
+WRANGLER_SECRETS_FILE="$(git ls-files ":/secrets/wrangler.toml.age")"
 # NOTE: Even though wrangler accepts a --config paramter, it still expects
 # wrangler.toml to be in the local directory.
-"$AGE_BIN" --decrypt --identity "$IDENTITY_FILE" --output ./wrangler.toml "$WRANGLER_SECRETS_FILE"
+age --decrypt --identity "$IDENTITY_FILE" --output ./wrangler.toml "$WRANGLER_SECRETS_FILE"
 
 # Expected vars:
 #  - SENTRY_AUTH_TOKEN
 #  - SENTRY_PROJECT
 #  - SENTRY_ORG
-SENTRY_SECRET_FILE="$("$GIT_BIN" ls-files ":/secrets/sentry_authn.sh.age")"
+SENTRY_SECRET_FILE="$(git ls-files ":/secrets/sentry_authn.sh.age")"
 SENTRY_ENV_FILE="$(mktemp)"
-"$AGE_BIN" --decrypt --identity "$IDENTITY_FILE" --output "$SENTRY_ENV_FILE" "$SENTRY_SECRET_FILE"
+age --decrypt --identity "$IDENTITY_FILE" --output "$SENTRY_ENV_FILE" "$SENTRY_SECRET_FILE"
 
+# shellcheck disable=SC1090
 source "$SENTRY_ENV_FILE"
+# shellcheck disable=SC1090
 source "$CLOUDFLARE_ENV_FILE"
 
 if [[ "$ENV" = "production" ]]
 then
-    if ! echo "$TAG" | egrep '^v[0-9]+\.[0-9]+\.[0-9]+$'
+    if ! echo "$TAG" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$'
     then
         echo "Tag $TAG not in expected format vX.Y.Z" >&2
         exit 1
@@ -52,20 +54,20 @@ then
   \"tag\": \"$TAG\"
 }" > version.json
 
-    "$GIT_BIN" add version.json
-    "$GIT_BIN" commit -m "Created release $TAG"
+    git add version.json
+    git commit -m "Created release $TAG"
 
-    "$GIT_BIN" tag "$TAG"
-    COMMIT="$("$GIT_BIN" rev-parse $TAG)"
+    git tag "$TAG"
+    COMMIT="$(git rev-parse "$TAG")"
 
-    "$SENTRY_BIN" \
+    sentry \
         releases \
         --org "$SENTRY_ORG" \
         --project "$SENTRY_PROJECT" \
          new \
         "$TAG"
 
-    "$SENTRY_BIN" \
+    sentry \
         releases \
         --org "$SENTRY_ORG" \
         --project "$SENTRY_PROJECT" \
@@ -82,9 +84,11 @@ fi
     --no-bundle \
     $BUNDLED_WORKER_PATH/index.js </dev/null
 
+
+
 if [[ "$ENV" = "production" ]]
 then
-    "$SENTRY_BIN" \
+    sentry \
         releases \
         --org "$SENTRY_ORG" \
         --project "$SENTRY_PROJECT" \

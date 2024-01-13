@@ -1,5 +1,5 @@
 { stdenvNoCC
-, writeShellScript
+, writeShellApplication
 , age
 , git
 , sentry-cli
@@ -29,15 +29,17 @@ in
 
 {
   inherit workerBundle;
-  releaseTool = writeShellScript "release.sh" ''
-    set -euo pipefail
+  releaseTool = writeShellApplication {
+    name = "release";
 
-    WRANGLER_BIN="${nodeModules}/node_modules/.bin/wrangler2"
-    AGE_BIN="${age}/bin/age"
-    GIT_BIN="${git}/bin/git"
-    SENTRY_BIN="${sentry-cli}/bin/sentry-cli"
-    BUNDLED_WORKER_PATH="${workerBundle}"
+    runtimeInputs = [ age git sentry-cli ];
+    text = ''
+      set -euo pipefail
 
-    ${builtins.readFile ./release.sh}
-  '';
+      WRANGLER_BIN="${nodeModules}/node_modules/.bin/wrangler2"
+      BUNDLED_WORKER_PATH="${workerBundle}"
+
+      ${builtins.readFile ./release.sh}
+    '';
+  };
 }
