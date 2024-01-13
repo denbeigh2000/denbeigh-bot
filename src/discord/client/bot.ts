@@ -9,6 +9,8 @@ import {
     APIRole,
 } from "discord-api-types/payloads/v10";
 
+import { RESTJSONErrorCodes } from "discord-api-types/rest/v10";
+
 import {
     RESTDeleteAPIChannelMessageResult,
     RESTPatchAPIChannelMessageJSONBody,
@@ -60,8 +62,8 @@ export class BotClient extends Client {
             roles,
         }
         const url = Routes.guildMember(guildId, userId);
-        const maybeUser = await this.rest.put(url, { body }) as RESTPutAPIGuildMemberResult;
-        return maybeUser || null;
+        // NOTE: This returns 201 No Content when the user is already in the guild.
+        return await this.rest.put(url, { body }) as RESTPutAPIGuildMemberResult || null;
     }
 
     public async getGuildMember(
@@ -69,8 +71,15 @@ export class BotClient extends Client {
         userId: Snowflake
     ): Promise<APIGuildMember | null> {
         const route = Routes.guildMember(guildId, userId);
-        const maybeUser = await this.rest.get(route) as RESTGetAPIGuildMemberResult;
-        return maybeUser || null;
+        try {
+            return await this.rest.get(route) as RESTGetAPIGuildMemberResult;
+        } catch (e) {
+            if (e.code && e.code === RESTJSONErrorCodes.UnknownMember) {
+                return null;
+            }
+
+            throw e;
+        }
     }
 
     public async createMessage(

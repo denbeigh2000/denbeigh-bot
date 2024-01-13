@@ -1,4 +1,5 @@
 import { APIUser } from "discord-api-types/payloads/v10";
+import { RESTJSONErrorCodes } from "discord-api-types/v10";
 
 import { BotClient, UserClient } from "../discord/client";
 import { OAuthClient } from "../discord/oauth";
@@ -65,7 +66,13 @@ export async function handler(
             applyRoles
         );
     } catch (e) {
-        return returnStatus(403, "either discord is down, or you're banned");
+        // TODO: Handle this within BotClient.joinGuild
+        // (implement error class, reason enums, etc)
+        if (e.code && e.code === RESTJSONErrorCodes.UserBannedFromThisGuild) {
+            return returnStatus(403, "you are banned");
+        }
+
+        throw e;
     }
 
     let channel = env.GENERAL_CHANNEL;
