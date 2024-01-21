@@ -2,7 +2,7 @@
 
 from release.environment import Environment
 from release.release_mgmt import git, manager
-from release.release_mgmt.version import Mode
+from release.release_mgmt.version import Mode, Version
 from release.sentry import Sentry
 from release.wrangler import Wrangler
 
@@ -25,10 +25,9 @@ def cli() -> None:
 
 
 @cli.command()
-@click.argument("MODE", type=click.Choice(BUMP_MODES), default=None)
-def bump_version(mode: Mode) -> None:
-    assert mode in ("major", "minor", "patch")
-    manager.version_bump(mode)
+def print_version() -> None:
+    version = manager.last_version() or Version(0, 0, 0)
+    print(version.version_string("patch"))
 
 
 @cli.command()
