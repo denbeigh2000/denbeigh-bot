@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from environment import Environment
-from release_mgmt import git, manager
-from release_mgmt.version import Mode
-from sentry import Sentry
-from wrangler import Wrangler
+from release.environment import Environment
+from release.release_mgmt import git, manager
+from release.release_mgmt.version import Mode
+from release.sentry import Sentry
+from release.wrangler import Wrangler
 
 from pathlib import Path
 
@@ -69,3 +69,7 @@ def deploy(
 
     if is_prod:
         sentry.upload_sourcemaps(tag_str, bundle_path, sourcemap_path)
+
+
+if __name__ == "__main__":
+    cli()

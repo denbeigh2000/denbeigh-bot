@@ -21,17 +21,20 @@ let
   };
 
   worker = callPackage ./build.nix { inherit nodeModules; };
+  releaseTool = callPackage ./release { inherit nodeModules; };
 in
 {
   shell = mkShell {
-    packages = devPackages.node.allNode18 ++ [
+    packages = devPackages.node.allNode21 ++ [
       age
-      yarn
+      devPackages.node.yarn
+      devPackages.python.python311
       sentry-cli
       pre-commit
       nixVersions.nix_2_17
     ];
   };
 
-  inherit (worker) workerBundle releaseTool;
+  inherit (worker) workerBundle;
+  inherit releaseTool;
 }

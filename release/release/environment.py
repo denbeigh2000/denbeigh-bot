@@ -1,5 +1,5 @@
-from secrets import Secrets
-from shell import source_file
+from release.secrets import Secrets
+from release.shell import source_file
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -35,8 +35,8 @@ class EnvironmentCredentials(ABC, Generic[E]):
         total_env = {**os.environ, **new_env}
         return cls.from_env(total_env)
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_env(cls: Type[E], env: Dict[str, str]) -> E:
         ...
 

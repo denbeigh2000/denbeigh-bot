@@ -1,5 +1,5 @@
-from .version import Mode, Version
-from . import git
+from release.release_mgmt import git
+from release.release_mgmt.version import Mode, Version
 
 from copy import deepcopy
 from typing import Optional
