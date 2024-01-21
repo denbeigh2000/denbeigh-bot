@@ -96,6 +96,19 @@ class Environment:
         return val
 
     @classmethod
+    def setup_wrangler(
+        cls, dest_toml: Path, secrets: Optional[Secrets] = None
+    ):
+        # NOTE: Even though we can provide a path to wrangler.toml, wrangler
+        # still expects resources to be located relative to that directory.
+        s = secrets or Secrets.from_env()
+        wrangler_bin = Path(cls.get_environ("WRANGLER_BIN"))
+        wrangler_toml_tmp = decrypt_secret("wrangler.toml", s)
+        shutil.move(wrangler_toml_tmp, dest_toml)
+
+        return wrangler_bin
+
+    @classmethod
     def from_env(cls) -> "Environment":
         secrets = Secrets.from_env()
 
@@ -108,12 +121,7 @@ class Environment:
 
         cf = CFCredentials.from_secret_file("cf_authn.sh", secrets)
         sentry = SentryCredentials.from_secret_file("sentry_authn.sh", secrets)
-
-        # NOTE: Even though we can provide a path to wrangler.toml, wrangler
-        # still expects resources to be located relative to that directory.
-        wrangler_bin = Path(cls.get_environ("WRANGLER_BIN"))
-        wrangler_toml_tmp = decrypt_secret("wrangler.toml", secrets)
-        shutil.move(wrangler_toml_tmp, wrangler_toml)
+        wrangler_bin = cls.setup_wrangler(wrangler_toml, secrets)
 
         return cls(
             cf,

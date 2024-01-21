@@ -7,6 +7,8 @@ import subprocess
 PathEl = Union[Path, str]
 PathEls = Sequence[PathEl]
 
+COMPATIBILITY_DATE = "2023-03-02"
+
 
 @dataclass
 class Wrangler:
@@ -24,6 +26,17 @@ class Wrangler:
     def deploy(self, env: str, bundle_path: Path) -> None:
         self._run(["deploy", "--env", env, "--no-bundle", bundle_path])
 
-    def build(self) -> None:
-        # TODO
-        raise NotImplementedError
+    def build(self, out_dir: Path) -> None:
+        cmd: PathEls = [
+            "deploy",
+            "--compatibility-date",
+            COMPATIBILITY_DATE,
+            "--name",
+            "local-build",
+            "--minify",
+            "--dry-run",
+            "--outdir",
+            out_dir,
+            "src/index.ts",
+        ]
+        self._run(cmd)
