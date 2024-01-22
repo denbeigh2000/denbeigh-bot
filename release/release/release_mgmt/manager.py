@@ -1,7 +1,6 @@
 from release.release_mgmt.git import Git
 from release.release_mgmt.version import Mode, Version
 
-from copy import deepcopy
 from typing import Optional
 import re
 
@@ -24,7 +23,16 @@ class ReleaseManager:
     def is_release_branch(self, branch: Optional[str] = None) -> bool:
         # NOTE: new assignment so mypy no longer considers it Optional
         branch_ = branch or self._git.branch()
-        return branch_.startswith("release/")
+        return branch_.startswith(RELEASE_PREFIX)
+
+    def is_release_branch_for_version(
+        self,
+        version: Version,
+        branch: Optional[str] = None,
+    ) -> bool:
+        exp = f'{RELEASE_PREFIX}/{version.version_string("minor")}'
+        branch_ = branch or self._git.branch()
+        return branch_ == exp
 
     def version_bump(self, mode: Mode) -> Version:
         assert mode in ("major", "minor", "patch")
@@ -33,8 +41,7 @@ class ReleaseManager:
         version = self.last_version()
         assert version, "couldn't find version"
 
-        new_version = deepcopy(version)
-        new_version.bump(mode)
+        version.bump(mode)
 
         if mode in ("major", "minor"):
             if branch != "master":
@@ -47,15 +54,16 @@ class ReleaseManager:
             release_branch = f"{RELEASE_PREFIX}{min_version}"
             self._git.checkout(release_branch, new=True)
         elif mode == "patch":
-            if not self.is_release_branch(branch):
+            if not self.is_release_branch_for_version(version, branch):
                 raise VersionBumpError(
-                    "need to be on a release branch for patch bump"
+                    "need to be on correct release branch for patch bump"
                 )
 
-        version_str = new_version.version_string(mode)
+        # vx.y.z
+        version_str = version.version_string()
         tag = f"v{version_str}"
         self._git.tag(tag)
-        return new_version
+        return version
 
     def last_version(self) -> Optional[Version]:
         tags = self._git.get_tags()
