@@ -60,7 +60,6 @@ def deploy(
     if is_prod:
         env.git.assert_clean()
         manager = ReleaseManager(env.git)
-        assert manager.is_release_branch(env.git.branch())
         new_version = manager.version_bump(bump_mode)
         tag_str = f"v{new_version.version_string()}"
         hash = env.git.commit_hash()
