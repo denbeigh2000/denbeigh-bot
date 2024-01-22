@@ -1,22 +1,27 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Sequence, Union
-import functools
 import subprocess
 import tempfile
 import textwrap
 
 SUPPORTED_ID_TYPES = ["rsa", "ed25519"]
 
+PathEl = Union[str, Path]
+
 
 @dataclass
 class Secrets:
     identities: List[Path]
 
-    @functools.lru_cache
     def _id_args(self) -> List[str]:
         # [--identity, <path>, --identity, <path>]
-        return [_ for _ in [("--identity", p) for p in self.identities]]
+        flags = []
+        for identity in self.identities:
+            flags.append("--identity")
+            flags.append(str(identity))
+
+        return flags
 
     @classmethod
     def from_env(cls) -> "Secrets":
@@ -33,8 +38,8 @@ class Secrets:
 
     def decrypt(self, path: Path) -> Path:
         tmp = tempfile.mktemp()
-        tail_args: List[Union[str, Path]] = ["--output", tmp, path]
-        cmd: Sequence[Union[str, Path]] = ["age"] + self._id_args() + tail_args
+        tail: List[PathEl] = ["--output", tmp, path]
+        cmd: Sequence[PathEl] = ["age", "--decrypt"] + self._id_args() + tail
 
         subprocess.run(cmd, check=True)
         return Path(tmp)

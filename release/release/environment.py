@@ -23,7 +23,7 @@ E = TypeVar("E", bound="EnvironmentCredentials")
 def decrypt_secret(filename: str, secrets: Secrets) -> Path:
     path_ref = f":/secrets/{filename}.age"
     secret_path = subprocess.check_output(["git", "ls-files", path_ref])
-    path = Path(secret_path.decode())
+    path = Path(secret_path.decode().strip())
     return secrets.decrypt(path)
 
 
@@ -79,6 +79,7 @@ class Environment:
     wrangler_bin: Path
     wrangler_toml_path: Path
 
+    git_root: Path
     git_branch: str
 
     @staticmethod
@@ -93,7 +94,7 @@ class Environment:
 
             raise AssertionError(f"missing {envvar} env var")
 
-        return val
+        return val.strip()
 
     @classmethod
     def setup_wrangler(
@@ -113,11 +114,11 @@ class Environment:
         secrets = Secrets.from_env()
 
         cmd = ["git", "rev-parse", "--show-toplevel"]
-        git_root = Path(subprocess.check_output(cmd).decode())
+        git_root = Path(subprocess.check_output(cmd).decode().strip())
         wrangler_toml = git_root / "wrangler.toml"
 
         cmd = ["git", "rev-parse", "--abbrev-ref", "HEAD"]
-        git_branch = subprocess.check_output(cmd).decode()
+        git_branch = subprocess.check_output(cmd).decode().strip()
 
         cf = CFCredentials.from_secret_file("cf_authn.sh", secrets)
         sentry = SentryCredentials.from_secret_file("sentry_authn.sh", secrets)
@@ -128,5 +129,6 @@ class Environment:
             sentry,
             wrangler_bin,
             wrangler_toml,
+            git_root,
             git_branch,
         )

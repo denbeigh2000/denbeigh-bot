@@ -72,14 +72,20 @@ def deploy(
 
 
 @cli.command()
-@click.argument("OUTPUT_DIRECTORY", type=Path, required=True)
-@click.argument("NODE_MODULES_PATH", type=Path, required=True)
-def build(output_directory: Path, node_modules_path: Path) -> None:
+@click.argument("OUTPUT_DIRECTORY", required=True)
+@click.argument("NODE_MODULES_PATH", required=True)
+def build(output_directory: str, node_modules_path: str) -> None:
+    output_dir = Path(output_directory.strip())
+    node_modules_dir = Path(node_modules_path.strip())
+
     # TODO: improve?
     proj_dir = Path.cwd()
     node_modules = proj_dir / "node_modules"
-    node_modules.unlink(missing_ok=True)
-    node_modules.symlink_to(node_modules_path)
+
+    # Just in case we want to use the local node_modules (experimentation, etc)
+    if node_modules != node_modules_dir:
+        node_modules.unlink(missing_ok=True)
+        node_modules.symlink_to(node_modules_dir)
 
     wrangler_toml = proj_dir / "wrangler.toml"
     wrangler_bin = Environment.setup_wrangler(wrangler_toml)
@@ -87,11 +93,11 @@ def build(output_directory: Path, node_modules_path: Path) -> None:
 
     tmp_build_dir = proj_dir / "dest"
     tmp_build_dir.mkdir(exist_ok=True)
-    output_directory.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     wrangler.build(tmp_build_dir)
     for f in ("index.js", "index.js.map"):
-        shutil.move(tmp_build_dir / f, output_directory / f)
+        shutil.move(tmp_build_dir / f, output_dir / f)
 
 
 if __name__ == "__main__":

@@ -11,8 +11,8 @@ def source_file(shell_path: Path) -> Dict[str, str]:
 
     output = subprocess.check_output(cmd, env=start_env)
 
-    partitions = [line.partition("=") for line in output.decode().splitlines()]
+    ps = [line.strip().partition("=") for line in output.decode().splitlines()]
 
-    new_env_set = {(key, value) for (key, _, value) in partitions}
+    new_env_set = {(key, value) for (key, _, value) in ps}
     start_env_set = {_ for _ in start_env.items()}
     return dict(new_env_set - start_env_set)
