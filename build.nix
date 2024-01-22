@@ -1,45 +1,27 @@
 { stdenvNoCC
-, writeShellApplication
-, age
-, git
-, sentry-cli
+, releaseTool
 , nodeModules
 }:
 
 let
-  workerBundle = stdenvNoCC.mkDerivation {
-    pname = "denbeigh-bot-cfworker-bundle";
-    version = "0.0.0";
-
-    src = ./.;
-
-    # IDEA: In this step, we use wrangler's bundling process via publish --dry-run
-    # to run the provided minification + bundling, then write that to the Nix
-    # store. We can then publish in the next step by running
-    # publish --no-bundle. This may also require a custom build step(?)
-
-    buildPhase = ''
-      WRANGLER_BIN="${nodeModules}/node_modules/.bin/wrangler2"
-      NODE_MODULES_PATH="${nodeModules}"
-
-      ${builtins.readFile ./build.sh}
-    '';
-  };
+  # nodeModules = js2nix.makeNodeModules ./package.json {
+  #   tree = js2nix.load ./yarn.lock {};
+  # };
 in
 
-{
-  inherit workerBundle;
-  releaseTool = writeShellApplication {
-    name = "release";
+stdenvNoCC.mkDerivation {
+  pname = "denbeigh-bot-cfworker-bundle";
+  version = "0.0.0";
 
-    runtimeInputs = [ age git sentry-cli ];
-    text = ''
-      set -euo pipefail
+  src = ./.;
 
-      WRANGLER_BIN="${nodeModules}/node_modules/.bin/wrangler2"
-      BUNDLED_WORKER_PATH="${workerBundle}"
+  # IDEA: In this step, we use wrangler's bundling process via publish --dry-run
+  # to run the provided minification + bundling, then write that to the Nix
+  # store. We can then publish in the next step by running
+  # publish --no-bundle. This may also require a custom build step(?)
 
-      ${builtins.readFile ./release.sh}
-    '';
-  };
+  # TODO: change WRANGLER_BIN? we provide node_modules here anyway.
+  buildPhase = ''
+    ${releaseTool}/bin/release build "$out" "${nodeModules}/node_modules"
+  '';
 }

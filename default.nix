@@ -1,18 +1,15 @@
 { callPackage
+, writeShellScript
+, yarn2nix-moretea
 , mkShell
 , devPackages
-, yarn
 , sentry-cli
 , nixVersions
 , pre-commit
 , age
-, yarn2nix-moretea
 }:
 
 let
-  # nodeModules = js2nix.makeNodeModules ./package.json {
-  #   tree = js2nix.load ./yarn.lock {};
-  # };
   nodeModules = yarn2nix-moretea.mkYarnModules {
     pname = "cf-worker-deps";
     version = "0.0.0";
@@ -20,18 +17,24 @@ let
     yarnLock = ./yarn.lock;
   };
 
-  worker = callPackage ./build.nix { inherit nodeModules; };
+  releaseTool = callPackage ./release { inherit nodeModules; };
+  workerBundle = callPackage ./build.nix { inherit releaseTool nodeModules; };
+  bundle = "${workerBundle}/index.js";
 in
 {
   shell = mkShell {
-    packages = devPackages.node.allNode18 ++ [
+    packages = devPackages.node.allNode21 ++ [
       age
-      yarn
+      devPackages.node.yarn
+      devPackages.python.python311
       sentry-cli
       pre-commit
       nixVersions.nix_2_17
     ];
   };
 
-  inherit (worker) workerBundle releaseTool;
+  inherit workerBundle;
+  releaseTool = writeShellScript "release" ''
+    ${releaseTool}/bin/release deploy $@ ${bundle} ${bundle}.map;
+  '';
 }
