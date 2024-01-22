@@ -1,27 +1,18 @@
 { callPackage
 , mkShell
 , devPackages
-, yarn
 , sentry-cli
 , nixVersions
 , pre-commit
 , age
-, yarn2nix-moretea
 }:
 
 let
-  # nodeModules = js2nix.makeNodeModules ./package.json {
-  #   tree = js2nix.load ./yarn.lock {};
-  # };
-  nodeModules = yarn2nix-moretea.mkYarnModules {
-    pname = "cf-worker-deps";
-    version = "0.0.0";
-    packageJSON = ./package.json;
-    yarnLock = ./yarn.lock;
-  };
+  releaseTool = callPackage ./release { };
+  workerBundle = callPackage ./build.nix { inherit releaseTool; };
 
-  worker = callPackage ./build.nix { inherit nodeModules; };
-  releaseTool = callPackage ./release { inherit nodeModules; };
+  bundle = "${workerBundle}/index.js";
+  deployCmd = "${releaseTool}/bin/release deploy $@ ${bundle} ${bundle}.map";
 in
 {
   shell = mkShell {
@@ -35,6 +26,7 @@ in
     ];
   };
 
-  inherit (worker) workerBundle;
+  inherit workerBundle;
   inherit releaseTool;
+  inherit deployCmd;
 }

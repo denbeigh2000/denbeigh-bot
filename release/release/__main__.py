@@ -52,7 +52,7 @@ def deploy(
         auth_token=env.sentry.token,
     )
     wrangler = Wrangler(
-        wrangler_toml=env.wrangler_toml_path,
+        src_root=env.git.root(),
         wrangler_bin=env.wrangler_bin,
     )
     is_prod = release_mode == "production"
@@ -78,7 +78,6 @@ def deploy(
 @click.argument("OUTPUT_DIRECTORY", required=True)
 @click.argument("NODE_MODULES_PATH", required=True)
 def build(output_directory: str, node_modules_path: str) -> None:
-    git = Git.from_local_dir()
     output_dir = Path(output_directory.strip())
     node_modules_dir = Path(node_modules_path.strip())
 
@@ -91,9 +90,8 @@ def build(output_directory: str, node_modules_path: str) -> None:
         node_modules.unlink(missing_ok=True)
         node_modules.symlink_to(node_modules_dir)
 
-    wrangler_toml = proj_dir / "wrangler.toml"
-    wrangler_bin = Environment.setup_wrangler(git, wrangler_toml)
-    wrangler = Wrangler(wrangler_toml=wrangler_toml, wrangler_bin=wrangler_bin)
+    wrangler_bin = node_modules_dir / ".bin/wrangler2"
+    wrangler = Wrangler(src_root=proj_dir, wrangler_bin=wrangler_bin)
 
     tmp_build_dir = proj_dir / "dest"
     tmp_build_dir.mkdir(exist_ok=True)
