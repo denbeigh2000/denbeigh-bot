@@ -1,3 +1,4 @@
+from release.release_mgmt.git import Git
 from release.secrets import Secrets
 from release.shell import source_file
 
@@ -7,7 +8,6 @@ from pathlib import Path
 from typing import Callable, Dict, Generic, Optional, Type, TypeVar
 import os
 import shutil
-import subprocess
 
 BUMP_MODES = ["major", "minor", "patch"]
 RELEASE_MODES = ["staging", "production"]
@@ -20,17 +20,17 @@ SUPPORTED_ID_TYPES = ["rsa", "ed25519"]
 E = TypeVar("E", bound="EnvironmentCredentials")
 
 
-def decrypt_secret(filename: str, secrets: Secrets) -> Path:
+def decrypt_secret(git: Git, filename: str, secrets: Secrets) -> Path:
     path_ref = f":/secrets/{filename}.age"
-    secret_path = subprocess.check_output(["git", "ls-files", path_ref])
-    path = Path(secret_path.decode().strip())
-    return secrets.decrypt(path)
+    secret_path = git.ls_files([path_ref])
+    assert len(secret_path) == 1, "should find exactly one secret"
+    return secrets.decrypt(secret_path[0])
 
 
 class EnvironmentCredentials(ABC, Generic[E]):
     @classmethod
-    def from_secret_file(cls: Type[E], filename: str, secrets: Secrets) -> E:
-        temp_file = decrypt_secret(filename, secrets)
+    def from_secret_file(cls: Type[E], git: Git, fname: str, s: Secrets) -> E:
+        temp_file = decrypt_secret(git, fname, s)
         new_env = source_file(temp_file)
         total_env = {**os.environ, **new_env}
         return cls.from_env(total_env)
@@ -76,11 +76,10 @@ class Environment:
     cf: CFCredentials
     sentry: SentryCredentials
 
+    git: Git
+
     wrangler_bin: Path
     wrangler_toml_path: Path
-
-    git_root: Path
-    git_branch: str
 
     @staticmethod
     def get_environ(
@@ -98,37 +97,32 @@ class Environment:
 
     @classmethod
     def setup_wrangler(
-        cls, dest_toml: Path, secrets: Optional[Secrets] = None
+        cls, git: Git, dest_toml: Path, secrets: Optional[Secrets] = None
     ):
         # NOTE: Even though we can provide a path to wrangler.toml, wrangler
         # still expects resources to be located relative to that directory.
         s = secrets or Secrets.from_env()
         wrangler_bin = Path(cls.get_environ("WRANGLER_BIN"))
-        wrangler_toml_tmp = decrypt_secret("wrangler.toml", s)
+        wrangler_toml_tmp = decrypt_secret(git, "wrangler.toml", s)
         shutil.move(wrangler_toml_tmp, dest_toml)
 
         return wrangler_bin
 
     @classmethod
     def from_env(cls) -> "Environment":
-        secrets = Secrets.from_env()
+        s = Secrets.from_env()
+        git = Git.from_local_dir()
 
-        cmd = ["git", "rev-parse", "--show-toplevel"]
-        git_root = Path(subprocess.check_output(cmd).decode().strip())
-        wrangler_toml = git_root / "wrangler.toml"
+        cf = CFCredentials.from_secret_file(git, "cf_authn.sh", s)
+        sentry = SentryCredentials.from_secret_file(git, "sentry_authn.sh", s)
 
-        cmd = ["git", "rev-parse", "--abbrev-ref", "HEAD"]
-        git_branch = subprocess.check_output(cmd).decode().strip()
-
-        cf = CFCredentials.from_secret_file("cf_authn.sh", secrets)
-        sentry = SentryCredentials.from_secret_file("sentry_authn.sh", secrets)
-        wrangler_bin = cls.setup_wrangler(wrangler_toml, secrets)
+        wrangler_toml = git.root() / "wrangler.toml"
+        wrangler_bin = cls.setup_wrangler(git, wrangler_toml, s)
 
         return cls(
             cf,
             sentry,
+            git,
             wrangler_bin,
             wrangler_toml,
-            git_root,
-            git_branch,
         )

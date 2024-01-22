@@ -1,4 +1,4 @@
-from release.release_mgmt import git
+from release.release_mgmt.git import Git
 from release.release_mgmt.version import Mode, Version
 
 from copy import deepcopy
@@ -9,59 +9,63 @@ RELEASE_PREFIX = "release/"
 TAG_REGEX = re.compile(r"^v([0-9]+)\.([0-9]+)\.([0-9]+)$")
 
 
-def is_release_branch(branch: Optional[str] = None) -> bool:
-    if not branch:
-        branch = git.branch()
-    assert branch  # mypy
-
-    return branch.startswith("release/")
-
-
 class VersionBumpError(RuntimeError):
     pass
 
 
-def version_bump(mode: Mode) -> Version:
-    assert mode in ("major", "minor", "patch")
+class ReleaseManager:
+    def __init__(self, git: Git) -> None:
+        self._git = git
 
-    branch = git.branch()
-    version = last_version()
-    assert version, "couldn't find version"
+    @classmethod
+    def from_local_dir(cls) -> "ReleaseManager":
+        return cls(git=Git.from_local_dir())
 
-    new_version = deepcopy(version)
-    new_version.bump(mode)
+    def is_release_branch(self, branch: Optional[str] = None) -> bool:
+        # NOTE: new assignment so mypy no longer considers it Optional
+        branch_ = branch or self._git.branch()
+        return branch_.startswith("release/")
 
-    if mode in ("major", "minor"):
-        if branch != "master":
-            raise VersionBumpError(
-                f"need to be on main branch for a {mode} bump"
-            )
+    def version_bump(self, mode: Mode) -> Version:
+        assert mode in ("major", "minor", "patch")
 
-        # release/x.y
-        min_version = version.version_string("minor")
-        release_branch = f"{RELEASE_PREFIX}{min_version}"
-        git.checkout(release_branch, new=True)
-    elif mode == "patch":
-        if not is_release_branch(branch):
-            raise VersionBumpError(
-                "need to be on a release branch for patch bump"
-            )
+        branch = self._git.branch()
+        version = self.last_version()
+        assert version, "couldn't find version"
 
-    version_str = new_version.version_string(mode)
-    tag = f"v{version_str}"
-    git.tag(tag)
-    return new_version
+        new_version = deepcopy(version)
+        new_version.bump(mode)
 
+        if mode in ("major", "minor"):
+            if branch != "master":
+                raise VersionBumpError(
+                    f"need to be on main branch for a {mode} bump"
+                )
 
-def last_version() -> Optional[Version]:
-    tags = git.get_tags()
-    version_tag = next((t for t in tags if TAG_REGEX.match(t)), None)
+            # release/x.y
+            min_version = version.version_string("minor")
+            release_branch = f"{RELEASE_PREFIX}{min_version}"
+            self._git.checkout(release_branch, new=True)
+        elif mode == "patch":
+            if not self.is_release_branch(branch):
+                raise VersionBumpError(
+                    "need to be on a release branch for patch bump"
+                )
 
-    if not version_tag:
-        return None
+        version_str = new_version.version_string(mode)
+        tag = f"v{version_str}"
+        self._git.tag(tag)
+        return new_version
 
-    match = TAG_REGEX.match(version_tag)
-    assert match  # for mypy, tested earlier with filter
+    def last_version(self) -> Optional[Version]:
+        tags = self._git.get_tags()
+        version_tag = next((t for t in tags if TAG_REGEX.match(t)), None)
 
-    (major, minor, patch) = (int(i) for i in match.groups())
-    return Version(major, minor, patch)
+        if not version_tag:
+            return None
+
+        match = TAG_REGEX.match(version_tag)
+        assert match  # for mypy, tested earlier with filter
+
+        (major, minor, patch) = (int(i) for i in match.groups())
+        return Version(major, minor, patch)

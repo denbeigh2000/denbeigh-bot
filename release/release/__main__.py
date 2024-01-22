@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 from release.environment import Environment
-from release.release_mgmt import git, manager
+from release.release_mgmt.git import Git
+from release.release_mgmt.manager import ReleaseManager
 from release.release_mgmt.version import Mode, Version
 from release.sentry import Sentry
 from release.wrangler import Wrangler
@@ -26,6 +27,7 @@ def cli() -> None:
 
 @cli.command()
 def print_version() -> None:
+    manager = ReleaseManager.from_local_dir()
     version = manager.last_version() or Version(0, 0, 0)
     print(version.version_string("patch"))
 
@@ -57,12 +59,13 @@ def deploy(
 
     tag_str = ""
     if is_prod:
-        git.assert_clean()
-        assert manager.is_release_branch(env.git_branch)
+        env.git.assert_clean()
+        manager = ReleaseManager(env.git)
+        assert manager.is_release_branch(env.git.branch())
         new_version = manager.version_bump(bump_mode)
         tag_str = f"v{new_version.version_string()}"
-        hash = git.commit_hash()
-        git.push(tags=True)
+        hash = env.git.commit_hash()
+        env.git.push(tags=True)
         sentry.create_release(commit=hash, tag=tag_str)
 
     wrangler.deploy(release_mode, bundle_path)
@@ -75,6 +78,7 @@ def deploy(
 @click.argument("OUTPUT_DIRECTORY", required=True)
 @click.argument("NODE_MODULES_PATH", required=True)
 def build(output_directory: str, node_modules_path: str) -> None:
+    git = Git.from_local_dir()
     output_dir = Path(output_directory.strip())
     node_modules_dir = Path(node_modules_path.strip())
 
@@ -88,7 +92,7 @@ def build(output_directory: str, node_modules_path: str) -> None:
         node_modules.symlink_to(node_modules_dir)
 
     wrangler_toml = proj_dir / "wrangler.toml"
-    wrangler_bin = Environment.setup_wrangler(wrangler_toml)
+    wrangler_bin = Environment.setup_wrangler(git, wrangler_toml)
     wrangler = Wrangler(wrangler_toml=wrangler_toml, wrangler_bin=wrangler_bin)
 
     tmp_build_dir = proj_dir / "dest"
