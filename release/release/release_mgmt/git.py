@@ -84,4 +84,4 @@ class Git:
             cmd.extend(argv)
         raw = self._output(cmd)
 
-        return [Path(p) for p in raw.split("\0")]
+        return [Path(p) for p in raw.split("\0") if p]

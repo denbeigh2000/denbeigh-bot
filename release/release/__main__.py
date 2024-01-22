@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from release.environment import Environment
-from release.release_mgmt.git import Git
 from release.release_mgmt.manager import ReleaseManager
 from release.release_mgmt.version import Mode, Version
 from release.sentry import Sentry

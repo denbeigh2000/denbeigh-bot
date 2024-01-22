@@ -1,9 +1,10 @@
+from release.utils import format_paths
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Sequence, Union
 import subprocess
 import tempfile
-import textwrap
 
 SUPPORTED_ID_TYPES = ["rsa", "ed25519"]
 
@@ -29,9 +30,7 @@ class Secrets:
         paths = (ssh_dir / f"id_{id_type}" for id_type in SUPPORTED_ID_TYPES)
         existing_paths = [p for p in paths if p.exists()]
         if not existing_paths:
-            searched = "\n".join(str(p) for p in paths)
-            textwrap.indent(searched, " - ")
-
+            searched = format_paths(paths)
             raise AssertionError(f"No paths found. Searched:\n{searched}")
 
         return cls(existing_paths)

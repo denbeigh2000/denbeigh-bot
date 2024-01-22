@@ -1,6 +1,7 @@
 from release.release_mgmt.git import Git
 from release.secrets import Secrets
 from release.shell import source_file
+from release.utils import format_paths
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -23,7 +24,11 @@ E = TypeVar("E", bound="EnvironmentCredentials")
 def decrypt_secret(git: Git, filename: str, secrets: Secrets) -> Path:
     path_ref = f":/secrets/{filename}.age"
     secret_path = git.ls_files([path_ref])
-    assert len(secret_path) == 1, "should find exactly one secret"
+    n_found = len(secret_path)
+    if n_found != 1:
+        found = format_paths(secret_path)
+        msg = f"should find exactly one secret for {filename}, found:\n{found}"
+        raise AssertionError(msg)
     return secrets.decrypt(secret_path[0])
 
 
