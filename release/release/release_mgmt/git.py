@@ -51,7 +51,7 @@ class Git:
         if new:
             cmd.append("-b")
         cmd.append(branch)
-        subprocess.run(cmd, check=True)
+        self._run(cmd, check=True)
 
     def push(
         self,
@@ -65,7 +65,7 @@ class Git:
         if tags:
             args.append("--tags")
 
-        subprocess.run(args, check=True)
+        self._run(args, check=True)
 
     def assert_clean(self) -> None:
         cmd = ["update-index", "--refresh"]
