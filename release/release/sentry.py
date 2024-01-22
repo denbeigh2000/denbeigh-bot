@@ -16,13 +16,16 @@ class Sentry:
     auth_token: str
 
     def _run(
-        self, cmd: Sequence[PathEl], check=True, *args, **kwargs
+        self,
+        cmd: Sequence[PathEl],
+        check=True,
+        **kwargs,
     ) -> subprocess.CompletedProcess:
         env = {**os.environ}
         env["SENTRY_AUTH_TOKEN"] = self.auth_token
 
-        argv = ["sentry-cli"] + list(cmd)
-        return subprocess.run(argv, env=env, check=check, *args, **kwargs)  # type: ignore
+        argv: Sequence[str | Path] = ["sentry-cli"] + [str(p) for p in cmd]
+        return subprocess.run(argv, env=env, check=check, **kwargs)
 
     def _releases(self, cmd: Sequence[PathEl]) -> subprocess.CompletedProcess:
         argv = [
@@ -39,7 +42,7 @@ class Sentry:
         cmd = ["new", tag]
         self._releases(cmd)
 
-        cmd = ["set-commits", "--commit", f"origin@${commit}", tag]
+        cmd = ["set-commits", "--commit", f"origin@{commit}", tag]
         self._releases(cmd)
 
     def upload_sourcemaps(
