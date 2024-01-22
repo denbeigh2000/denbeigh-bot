@@ -1,18 +1,12 @@
 { stdenvNoCC
-, yarn2nix-moretea
 , releaseTool
+, nodeModules
 }:
 
 let
   # nodeModules = js2nix.makeNodeModules ./package.json {
   #   tree = js2nix.load ./yarn.lock {};
   # };
-  nodeModules = yarn2nix-moretea.mkYarnModules {
-    pname = "cf-worker-deps";
-    version = "0.0.0";
-    packageJSON = ./package.json;
-    yarnLock = ./yarn.lock;
-  };
 in
 
 stdenvNoCC.mkDerivation {
@@ -28,7 +22,6 @@ stdenvNoCC.mkDerivation {
 
   # TODO: change WRANGLER_BIN? we provide node_modules here anyway.
   buildPhase = ''
-    export WRANGLER_BIN="${nodeModules}/node_modules/.bin/wrangler2"
     ${releaseTool}/bin/release build "$out" "${nodeModules}/node_modules"
   '';
 }

@@ -29,12 +29,12 @@
 
         pkg = pkgs.callPackage ./default.nix { };
 
-        inherit (pkg) shell releaseTool deployCmd;
+        inherit (pkg) shell releaseTool workerBundle;
       in
       {
         apps.releaseTool = {
           type = "app";
-          program = deployCmd;
+          program = "${releaseTool}";
         };
 
         devShells = {

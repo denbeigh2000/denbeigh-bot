@@ -1,4 +1,6 @@
 { callPackage
+, writeShellScript
+, yarn2nix-moretea
 , mkShell
 , devPackages
 , sentry-cli
@@ -8,11 +10,16 @@
 }:
 
 let
-  releaseTool = callPackage ./release { };
-  workerBundle = callPackage ./build.nix { inherit releaseTool; };
+  nodeModules = yarn2nix-moretea.mkYarnModules {
+    pname = "cf-worker-deps";
+    version = "0.0.0";
+    packageJSON = ./package.json;
+    yarnLock = ./yarn.lock;
+  };
 
+  releaseTool = callPackage ./release { inherit nodeModules; };
+  workerBundle = callPackage ./build.nix { inherit releaseTool nodeModules; };
   bundle = "${workerBundle}/index.js";
-  deployCmd = "${releaseTool}/bin/release deploy $@ ${bundle} ${bundle}.map";
 in
 {
   shell = mkShell {
@@ -27,6 +34,7 @@ in
   };
 
   inherit workerBundle;
-  inherit releaseTool;
-  inherit deployCmd;
+  releaseTool = writeShellScript "release" ''
+    ${releaseTool}/bin/release deploy $@ ${bundle} ${bundle}.map;
+  '';
 }
