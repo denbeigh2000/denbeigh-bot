@@ -1,5 +1,8 @@
 import { GroupManager } from "./manager";
-import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, MessageFlags, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { genericEphemeral, genericError } from "../../../discord/messages/errors";
+import { idsToRole, Role } from "../../../roles";
+import { Env } from "../../../env";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
@@ -16,44 +19,28 @@ export const subcommand: APIApplicationCommandSubcommandOption = {
 }
 
 export const handler = async (
+    env: Env,
     manager: GroupManager,
     name: string,
     userId: string
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> => {
     const user = await manager.getGuildMember(userId);
-    const flags = MessageFlags.Ephemeral & MessageFlags.Urgent;
     if (!user) {
-        return {
-            content: "You are not in this guild (somehow??)",
-            flags,
-        };
+        return genericError("You are not in this guild (somehow??)");
     }
 
-    if (
-        !(
-            user.roles.includes(manager.memberRole) ||
-            user.roles.includes(manager.modRole)
-        )
-    ) {
-        return {
-            content: "You are not authorised to create roles",
-            flags,
-        };
+    const userRole = idsToRole(env, user.roles);
+    if (!userRole || userRole < Role.Member) {
+        return genericError("You are not authorised to create groups");
     }
 
     const [newGroup, existing] = await manager.createGroup(name);
     if (existing) {
-        return {
-            content: `Group already exists: <@&${newGroup.roleId}>`,
-            flags,
-        };
+        genericError(`Group already exists: <@&${newGroup.roleId}>`);
     }
 
-    return {
-        content: [
-            `Created <@&${newGroup.roleId}>`,
-            `Join it with \`/group join name:${newGroup.name}\``,
-        ].join("\n"),
-        flags: MessageFlags.Ephemeral
-    };
+    return genericEphemeral([
+        `Created <@&${newGroup.roleId}>`,
+        `Join it with \`/group join name:${newGroup.name}\``,
+    ].join("\n"));
 };

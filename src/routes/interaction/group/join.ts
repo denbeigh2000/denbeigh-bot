@@ -1,5 +1,6 @@
 import { GroupManager } from "./manager";
-import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, MessageFlags, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { genericEphemeral, genericError } from "../../../discord/messages/errors";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
@@ -23,15 +24,9 @@ export const handler = async (
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> => {
     const group = await manager.joinGroup(name, userId);
     if (!group) {
-        return {
-            content: `No group named \`${name}\``,
-            flags: MessageFlags.Ephemeral & MessageFlags.Urgent,
-        };
+        return genericError(`No group named \`${name}\``);
     }
 
-    return {
-        content: `Added you to <@&${group.roleId}>`,
-        flags: MessageFlags.Ephemeral,
-    };
+    return genericEphemeral(`Added you to <@&${group.roleId}>`);
 }
 

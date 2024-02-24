@@ -20,6 +20,7 @@ import { handler as handlePing } from "./ping";
 import { handler as handleHelp } from "./help";
 import { admittedUser } from "../../discord/messages/log";
 import { idsToRole, Role, roleToID } from "../../roles";
+import { genericEphemeral, genericError } from "../../discord/messages/errors";
 
 export async function handler(
     request: Request,
@@ -58,17 +59,14 @@ export async function handler(
             if (!type) {
                 return returnJSON({
                     type: InteractionResponseType.ChannelMessageWithSource,
-                    data: {
-                        flags: MessageFlags.Ephemeral,
-                        content: `No such command: ${interaction.data.name}`,
-                    },
+                    data: genericError(`No such command: ${interaction.data.name}`),
                 });
             }
 
             const resp = await handleCommand(type, interaction, env, ctx, sentry);
             let msg = resp
             if (!resp) {
-                msg = { content: "OK", flags: MessageFlags.Ephemeral };
+                msg = genericEphemeral("OK");
             }
             return returnJSON({
                 type: InteractionResponseType.ChannelMessageWithSource,

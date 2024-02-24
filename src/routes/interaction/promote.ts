@@ -6,9 +6,9 @@ import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 
 import { BotClient } from "../../discord/client";
-import { genericEphemeral } from "../../discord/messages/errors";
+import { genericEphemeral, genericError } from "../../discord/messages/errors";
 import { Env } from "../../env";
-import { idsToRole, idToRole, Role, roleToID } from "../../roles";
+import { idsToRole, Role, roleToID } from "../../roles";
 import { Sentry } from "../../sentry";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
@@ -84,10 +84,10 @@ export async function handler(
 
     const userRole = idsToRole(env, interaction.member.roles);
     if (!userRole) {
-        return genericEphemeral("You have no valid roles");
+        return genericError("You have no valid roles");
     }
     if (userRole !== Role.Moderator && role && userRole <= role) {
-        return genericEphemeral("You do not have sufficient privileges for this promotion");
+        return genericError("You do not have sufficient privileges for this promotion");
     }
 
     const roleId = roleToID(env, role)!;

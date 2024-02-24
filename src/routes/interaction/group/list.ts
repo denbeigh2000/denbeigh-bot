@@ -1,5 +1,7 @@
-import { GroupManager } from "./manager";
 import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+
+import { genericEphemeral } from "../../../discord/messages/errors";
+import { GroupManager } from "./manager";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
@@ -10,10 +12,7 @@ export const subcommand: APIApplicationCommandSubcommandOption = {
 export const handler = async (manager: GroupManager): Promise<RESTPostAPIWebhookWithTokenJSONBody> => {
     const groups = await manager.listGroups();
     if (groups.length === 0) {
-        return {
-            content: "There are no groups yet!",
-            flags: MessageFlags.Ephemeral,
-        };
+        return genericEphemeral("There are no groups yet!");
     }
 
     groups.sort((a, b) => (a.name > b.name ? 1 : -1));
@@ -23,5 +22,5 @@ export const handler = async (manager: GroupManager): Promise<RESTPostAPIWebhook
     }
     content += "```\n";
 
-    return { content, flags: MessageFlags.Ephemeral };
+    return genericEphemeral(content);
 }
