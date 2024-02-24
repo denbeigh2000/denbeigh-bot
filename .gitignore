@@ -1,5 +1,6 @@
 node_modules/
 node_modules
+/.wrangler
 /wrangler*.toml
 *.env
 /dist/
@@ -7,3 +8,4 @@ node_modules
 .direnv/
 
 **/.dmypy.json
+**/*.bak
