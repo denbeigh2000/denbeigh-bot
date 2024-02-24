@@ -26,6 +26,8 @@ export interface Env {
     MOD_ROLE: string;
     MEMBER_ROLE: string;
     GUEST_ROLE: string;
+    IRL_ROLE: string;
+    WORK_ROLE: string;
 
     PENDING_CHANNEL: string;
     LOG_CHANNEL: string;
