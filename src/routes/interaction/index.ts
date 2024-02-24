@@ -8,7 +8,7 @@ import {
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
 import { BotClient } from "../../discord/client";
 import verify from "../../discord/verify";
-import { Env, getRoleIDFromRole, getUserRole } from "../../env";
+import { Env } from "../../env";
 import { Sentry } from "../../sentry";
 import { returnJSON, returnStatus } from "../../util/http";
 
@@ -19,7 +19,7 @@ import { handler as handlePromote } from "./promote";
 import { handler as handlePing } from "./ping";
 import { handler as handleHelp } from "./help";
 import { admittedUser } from "../../discord/messages/log";
-import { Role } from "../../roles";
+import { idsToRole, Role, roleToID } from "../../roles";
 
 export async function handler(
     request: Request,
@@ -207,8 +207,7 @@ async function handleMessageComponent(
         return;
     }
 
-
-    const userRole = getUserRole(env, interaction.member!.roles);
+    const userRole = idsToRole(env, interaction.member!.roles);
     if (!userRole) {
         await botClient.sendFollowup(
             env.CLIENT_ID,
@@ -239,7 +238,7 @@ async function handleMessageComponent(
 
     let logMessage: string;
     if (role) {
-        const applyRole = getRoleIDFromRole(env, role)!;
+        const applyRole = roleToID(env, role)!;
         await botClient.addRole(
             interaction.guild_id!,
             userId,

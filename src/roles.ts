@@ -1,3 +1,4 @@
+import { Snowflake } from "discord-api-types/globals";
 import { Env } from "./env";
 
 export enum Role {
@@ -40,7 +41,7 @@ export const ROLE_META = {
     },
 };
 
-export function roleToID(env: Env, role: Role): string {
+export function roleToID(env: Env, role: Role): Snowflake {
     switch (role) {
         case Role.Guest:
             return env.GUEST_ROLE;
@@ -53,7 +54,7 @@ export function roleToID(env: Env, role: Role): string {
     }
 };
 
-export function idToRole(env: Env, roleID: string): Role {
+export function idToRole(env: Env, roleID: Snowflake): Role {
     switch (roleID) {
         case env.GUEST_ROLE:
             return Role.Guest;
@@ -65,6 +66,25 @@ export function idToRole(env: Env, roleID: string): Role {
             throw new Error(`no such role for id: ${roleID}`);
     }
 };
+
+export function idsToRole(env: Env, roles: Snowflake[]): Role | null {
+    // This code is very messy if we don't build this map
+    const validRoles = new Map([
+        [env.MOD_ROLE, Role.Moderator],
+        [env.MEMBER_ROLE, Role.Member],
+        [env.GUEST_ROLE, Role.Guest],
+    ]);
+
+    const validUserRoles = roles
+        .filter((i) => validRoles.has(i))
+        .map((k) => validRoles.get(k)!);
+    if (!validUserRoles) {
+        return null;
+    }
+    validUserRoles.sort((a, b) => a - b);
+    return validUserRoles[0];
+
+}
 
 export enum AuxRole {
     Irl,
@@ -91,7 +111,7 @@ export const AUX_ROLE_META = {
     },
 };
 
-export function auxRoleToID(env: Env, role: AuxRole): string {
+export function auxRoleToID(env: Env, role: AuxRole): Snowflake {
     switch (role) {
         case AuxRole.Irl:
             return env.IRL_ROLE;
@@ -102,7 +122,7 @@ export function auxRoleToID(env: Env, role: AuxRole): string {
     }
 }
 
-export function idToAuxRole(env: Env, roleID: string): AuxRole {
+export function idToAuxRole(env: Env, roleID: Snowflake): AuxRole {
     switch (roleID) {
         case env.IRL_ROLE:
             return AuxRole.Irl;
@@ -111,4 +131,15 @@ export function idToAuxRole(env: Env, roleID: string): AuxRole {
         default:
             throw new Error(`no such role for id: ${roleID}`);
     }
+}
+
+export function idsToAuxRoles(env: Env, roles: Snowflake[]): AuxRole[] {
+    const validRoles = new Map([
+        [env.IRL_ROLE, AuxRole.Irl],
+        [env.WORK_ROLE, AuxRole.Work],
+    ]);
+
+    return roles
+        .filter((i) => validRoles.has(i))
+        .map((k) => validRoles.get(k)!);
 }

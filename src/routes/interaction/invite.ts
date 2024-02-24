@@ -3,16 +3,12 @@ import {
     ApplicationCommandOptionType,
     MessageFlags,
 } from "discord-api-types/payloads/v10";
-import {
-    Env,
-    Roles,
-    getRoleIDFromRole,
-    getRoleFromRoleID,
-} from "../../env";
+import { Env } from "../../env";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { BotClient } from "../../discord/client";
 import { Sentry } from "../../sentry";
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { idsToRole, Role, roleToID } from "../../roles";
 
 const USERNAME_PATTERN = /^^.+#[0-9]{4}$/;
 
@@ -95,15 +91,11 @@ export async function handler(
         };
     }
 
-    const validUserRoles = interaction.member.roles.filter(
-        (r) => getRoleFromRoleID(env, r) !== null
-    );
-    if (!validUserRoles) {
+    const userRole = idsToRole(env, interaction.member.roles);
+    if (!userRole) {
         return { content: "You have no valid roles" };
     }
-    const userRoleId = validUserRoles[0];
-    const userRole = getRoleFromRoleID(env, userRoleId)!;
-    if (userRole !== Roles.Moderator && role && userRole <= role) {
+    if (userRole !== Role.Moderator && role && userRole <= role) {
         return {
             content:
                 "You do not have sufficient privileges to award this role",
@@ -113,7 +105,7 @@ export async function handler(
 
     /* End TODO */
 
-    const roleId = getRoleIDFromRole(env, role)!;
+    const roleId = roleToID(env, role)!;
     await env.OAUTH.put(`preauth:${username}`, role.toString());
     await client.createMessage(env.LOG_CHANNEL, {
         content: `<@${awarder}> authorised \`${username}\` to join with the <@&${roleId}> role`,

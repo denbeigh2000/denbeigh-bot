@@ -1,17 +1,14 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
     ApplicationCommandOptionType,
-    MessageFlags,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+
 import { BotClient } from "../../discord/client";
-import {
-    Env,
-    getRoleFromRoleID,
-    getRoleIDFromRole,
-    Roles,
-} from "../../env";
+import { genericEphemeral } from "../../discord/messages/errors";
+import { Env } from "../../env";
+import { idsToRole, idToRole, Role, roleToID } from "../../roles";
 import { Sentry } from "../../sentry";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
@@ -55,12 +52,11 @@ export async function handler(
     _ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
-    const ephFlags = { flags: MessageFlags.Ephemeral };
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in promote command";
         sentry.captureMessage(msg, "warning");
-        return { content: msg, ...ephFlags };
+        return genericEphemeral(msg);
     }
 
     const awarder = interaction.member!.user.id;
@@ -83,32 +79,26 @@ export async function handler(
     if (!userId || !role) {
         const msg = `Missing one of user id (${userId}) or role id (${role})`;
         sentry.captureMessage(msg, "warning");
-        return { content: msg, ...ephFlags };
+        return genericEphemeral(msg);
     }
 
-    const validUserRoles = interaction.member.roles.filter(
-        (r) => getRoleFromRoleID(env, r) !== null
-    );
-    if (!validUserRoles) {
-        return { content: "You have no valid roles", ...ephFlags };
+    const userRole = idsToRole(env, interaction.member.roles);
+    if (!userRole) {
+        return genericEphemeral("You have no valid roles");
     }
-    const userRoleId = validUserRoles[0];
-    const userRole = getRoleFromRoleID(env, userRoleId)!;
-    if (userRole !== Roles.Moderator && role && userRole <= role) {
-        return {
-            content:
-                "You do not have sufficient privileges for this promotion",
-            ...ephFlags,
-        };
+    if (userRole !== Role.Moderator && role && userRole <= role) {
+        return genericEphemeral("You do not have sufficient privileges for this promotion");
     }
 
-    const roleId = getRoleIDFromRole(env, role)!;
+    const roleId = roleToID(env, role)!;
     await client.setManagedRole(
         interaction.guild_id!,
         [env.MOD_ROLE, env.MEMBER_ROLE, env.GUEST_ROLE],
         userId,
         roleId
     );
+
+    // TODO: Replace this with a newer, fancier message that fits our theme
     await client.createMessage(env.LOG_CHANNEL, {
         content: `<@${awarder}> awarded <@${userId}> the <@&${roleId}> role`,
         allowed_mentions: {
@@ -116,8 +106,5 @@ export async function handler(
         },
     });
 
-    return {
-        content: `OK, awarded <@${userId}> the <@&${roleId}> role.`,
-        ...ephFlags,
-    };
+    return genericEphemeral(`OK, awarded <@${userId}> the <@&${roleId}> role.`);
 }
