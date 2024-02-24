@@ -5,6 +5,7 @@ import {
     ButtonStyle,
     ComponentType,
     RESTPostAPIChannelMessageJSONBody,
+    Snowflake,
 } from "discord-api-types/v10";
 
 import { avatarURL, convertSnowflakeToDate } from "..";
@@ -55,17 +56,19 @@ const AUTH_BUTTONS: Array<ButtonMeta> = [
     },
 ];
 
-function renderButton(button: ButtonMeta): APIButtonComponent {
-    return {
-        style: button.style,
-        label: button.label,
-        custom_id: button.id,
-        disabled: false,
-        emoji: {
-            id: undefined,
-            name: button.emoji
-        },
-        type: ComponentType.Button,
+function renderButton(userID: Snowflake): (button: ButtonMeta) => APIButtonComponent {
+    return (button: ButtonMeta): APIButtonComponent => {
+        return {
+            custom_id: `authorise_button_${button.id}_${userID}`,
+            style: button.style,
+            label: button.label,
+            disabled: false,
+            emoji: {
+                id: undefined,
+                name: button.emoji
+            },
+            type: ComponentType.Button,
+        };
     };
 }
 
@@ -121,7 +124,7 @@ export function authorisePendingUser(env: Env, guildMember: APIGuildMember): RES
                 type: ComponentType.ActionRow,
                 components: [
                     {
-                        custom_id: "role",
+                        custom_id: `authorise_select_role_${user.id}`,
                         placeholder: "Select a role",
                         options: Object.values(AUX_ROLE_META).map(renderRole),
                         min_values: 1,
@@ -134,7 +137,7 @@ export function authorisePendingUser(env: Env, guildMember: APIGuildMember): RES
                 type: ComponentType.ActionRow,
                 components: [
                     {
-                        custom_id: "extra_roles",
+                        custom_id: `authorise_select_extraroles_${user.id}`,
                         placeholder: "Apply extra roles?",
                         options: Object.values(AUX_ROLE_META).map(renderRole),
                         min_values: 0,
@@ -145,7 +148,7 @@ export function authorisePendingUser(env: Env, guildMember: APIGuildMember): RES
             },
             {
                 type: ComponentType.ActionRow,
-                components: AUTH_BUTTONS.map(renderButton),
+                components: AUTH_BUTTONS.map(renderButton(user.id)),
             }
         ],
         allowed_mentions: {
