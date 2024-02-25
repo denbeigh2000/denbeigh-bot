@@ -59,7 +59,7 @@ const AUTH_BUTTONS: Array<ButtonMeta> = [
 function renderButton(userID: Snowflake): (button: ButtonMeta) => APIButtonComponent {
     return (button: ButtonMeta): APIButtonComponent => {
         return {
-            custom_id: `authorise_button_${button.id}_${userID}`,
+            custom_id: `authorise_${button.id}_${userID}`,
             style: button.style,
             label: button.label,
             disabled: false,
@@ -124,7 +124,7 @@ export function authorisePendingUser(env: Env, guildMember: APIGuildMember): RES
                 type: ComponentType.ActionRow,
                 components: [
                     {
-                        custom_id: `authorise_select_role_${user.id}`,
+                        custom_id: `authorise_role_${user.id}`,
                         placeholder: "Select a role",
                         options: Object.values(AUX_ROLE_META).map(renderRole),
                         min_values: 1,
@@ -137,7 +137,7 @@ export function authorisePendingUser(env: Env, guildMember: APIGuildMember): RES
                 type: ComponentType.ActionRow,
                 components: [
                     {
-                        custom_id: `authorise_select_extraroles_${user.id}`,
+                        custom_id: `authorise_extraroles_${user.id}`,
                         placeholder: "Apply extra roles?",
                         options: Object.values(AUX_ROLE_META).map(renderRole),
                         min_values: 0,
