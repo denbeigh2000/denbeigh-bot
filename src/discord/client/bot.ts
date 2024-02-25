@@ -31,6 +31,7 @@ import {
 } from "discord-api-types/rest/v10/interactions";
 
 import {
+    RESTDeleteAPIGuildBanResult,
     RESTDeleteAPIGuildMemberResult,
     RESTDeleteAPIGuildMemberRoleResult,
     RESTDeleteAPIGuildRoleResult,
@@ -38,6 +39,8 @@ import {
     RESTGetAPIGuildRolesResult,
     RESTPostAPIGuildRoleJSONBody,
     RESTPostAPIGuildRoleResult,
+    RESTPutAPIGuildBanJSONBody,
+    RESTPutAPIGuildBanResult,
     RESTPutAPIGuildMemberJSONBody,
     RESTPutAPIGuildMemberResult,
     RESTPutAPIGuildMemberRoleResult,
@@ -162,6 +165,19 @@ export class BotClient extends Client {
     public async kickUser(guildId: Snowflake, userId: Snowflake) {
         const route = Routes.guildMember(guildId, userId);
         await this.rest.delete(route) as RESTDeleteAPIGuildMemberResult;
+    }
+
+    public async banUser(guildId: Snowflake, userId: Snowflake, deleteMessageSeconds: number = 0) {
+        const route = Routes.guildBan(guildId, userId);
+        const body: RESTPutAPIGuildBanJSONBody = {
+            delete_message_seconds: deleteMessageSeconds,
+        }
+        await this.rest.put(route, { body }) as RESTPutAPIGuildBanResult;
+    }
+
+    public async unbanUser(guildId: Snowflake, userId: Snowflake) {
+        const route = Routes.guildBan(guildId, userId);
+        await this.rest.delete(route) as RESTDeleteAPIGuildBanResult;
     }
 
     public async deleteMessage(channelId: Snowflake, messageId: Snowflake) {

@@ -29,7 +29,7 @@ async function handleAccept(env: Env, now: Date, admitted: APIGuildMember, admit
 // the server.
 async function handleBan(env: Env, now: Date, banned: APIGuildMember, banner: APIGuildMember, botClient: BotClient): Promise<boolean> {
     // TODO: user banning
-    // await botClient.ki
+    await botClient.banUser(env.GUILD_ID, banned.user!.id);
     const msg = bannedUser(env, banner, banned, now);
     await botClient.createMessage(env.LOG_CHANNEL, msg);
 
