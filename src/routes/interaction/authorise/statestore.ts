@@ -72,11 +72,11 @@ export class StateStore {
             data: {
                 target_user_id: targetUser,
                 interactor_id: interactor,
-                role,
+                primary_role: role,
             },
             onConflict: {
                 column: ["target_user_id", "interactor_id"],
-                data: { role },
+                data: { primary_role: role },
             },
         }).execute();
     }
@@ -102,7 +102,7 @@ export class StateStore {
     private selectStateQuery(targetUser: Snowflake, interactor: Snowflake): Query {
         return this.db.fetchOne({
             tableName: INT_STATE_TABLE,
-            fields: ["roleRaw", "aux_roles as auxRolesRaw"],
+            fields: ["primary_role as roleRaw", "aux_roles as auxRolesRaw"],
             where: {
                 conditions: 'target_user_id = ?1 AND interactor_id = ?2',
                 params: [targetUser, interactor],
@@ -124,6 +124,8 @@ export class StateStore {
             return null;
         }
 
+        // NOTE: we can't actually do a "transaction" here, but I hope for my
+        // low-volume use cases that changes are unlikely in this section :^)
         if (!results.roleRaw || !results.auxRolesRaw) {
             // TODO: need to communicate that there were properties missing
             return null;

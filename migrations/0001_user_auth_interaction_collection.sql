@@ -7,8 +7,8 @@ CREATE TABLE users_pending_entry (
 
 CREATE TABLE pending_user_interaction_state (
     target_user_id  TEXT    NOT NULL,
-    interactor_id   TEXT    NOT NULL
-    role            TEXT    DEFAULT NULL,
+    interactor_id   TEXT    NOT NULL,
+    primary_role    TEXT    DEFAULT NULL,
     aux_roles       TEXT    DEFAULT NULL,
 
     PRIMARY KEY (target_user_id, interactor_id),
