@@ -70,7 +70,11 @@ async function handleButton(interaction: APIMessageComponentInteraction, env: En
         return false;
     }
 
-    let userRole = idsToRole(env, interaction.member!.roles);
+    // NOTE: i believe this is always the case when this is called from within
+    // a guild?
+    const interactor = interaction.member!;
+
+    let userRole = idsToRole(env, interactor.roles);
     if (!userRole) {
         await botClient.sendFollowup(
             env.CLIENT_ID,
@@ -83,7 +87,7 @@ async function handleButton(interaction: APIMessageComponentInteraction, env: En
         return false;
     }
 
-    const state = await stateStore.validateAndEnd(userID, interaction.user!.id);
+    const state = await stateStore.validateAndEnd(userID, interactor.user.id);
     if (!state) {
         console.warn("tried to end a thing that may have raced?");
         return false;
@@ -91,13 +95,13 @@ async function handleButton(interaction: APIMessageComponentInteraction, env: En
 
     switch (action) {
         case "accept":
-            await handleAccept(env, now, member, interaction.member!, state, botClient);
+            await handleAccept(env, now, member, interactor, state, botClient);
             break;
         case "ignore":
             await handleIgnore(env, member, botClient);
             break;
         case "ban":
-            await handleBan(env, now, member, interaction.member!, botClient);
+            await handleBan(env, now, member, interactor, botClient);
             break;
     }
 
@@ -116,12 +120,12 @@ async function handleSelect(data: APIMessageStringSelectInteractionData, env: En
         case "role":
             const rawRole = data.values[0];
             const role = ID_TO_ROLE[rawRole];
-            await store.setRole(role, interactorID, userID);
+            await store.setRole(role, userID, interactorID);
             return;
 
         case "extraroles":
             const auxRoles = data.values.map(v => ID_TO_AUX_ROLE[v]);
-            await store.setAuxRoles(auxRoles, interactorID, userID);
+            await store.setAuxRoles(auxRoles, userID, interactorID);
             return;
 
         default:
@@ -152,7 +156,7 @@ export async function handler(
     const [_, action, userID] = fragments;
     const botClient = new BotClient(env.BOT_TOKEN, sentry);
 
-    const interactor = interaction.user!;
+    const interactor = (interaction.member?.user || interaction.user)!;
 
     switch (interaction.data.component_type) {
         case ComponentType.Button:

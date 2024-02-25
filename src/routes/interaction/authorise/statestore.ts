@@ -66,7 +66,6 @@ export class StateStore {
     public async setRole(roleEnum: Role, targetUser: Snowflake, interactor: Snowflake) {
         const role = ROLE_META[roleEnum].id;
 
-        // TODO: check success?
         await this.db.insert({
             tableName: INT_STATE_TABLE,
             data: {

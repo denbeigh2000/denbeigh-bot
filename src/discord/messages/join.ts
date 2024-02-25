@@ -10,7 +10,7 @@ import {
 
 import { avatarURL, convertSnowflakeToDate } from "..";
 import { Env } from "../../env";
-import { AUX_ROLE_META, RoleMeta } from "../../roles";
+import { AUX_ROLE_META, RoleMeta, ROLE_META } from "../../roles";
 import { formatUser } from "../../util";
 
 const BLURPLE = 0xc9a2d7;
@@ -126,7 +126,7 @@ export function authorisePendingUser(env: Env, guildMember: APIGuildMember): RES
                     {
                         custom_id: `authorise_role_${user.id}`,
                         placeholder: "Select a role",
-                        options: Object.values(AUX_ROLE_META).map(renderRole),
+                        options: Object.values(ROLE_META).map(renderRole),
                         min_values: 1,
                         max_values: 1,
                         type: ComponentType.StringSelect,

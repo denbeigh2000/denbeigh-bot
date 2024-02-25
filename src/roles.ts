@@ -36,7 +36,7 @@ export const ROLE_META = {
     [Role.Moderator]: {
         id: "mod",
         friendlyName: "Moderator",
-        emoji: "✅",
+        emoji: "👮",
         description: "👀",
     },
 };
@@ -101,7 +101,7 @@ export const AUX_ROLE_META = {
         id: "irl",
         friendlyName: "IRL",
         emoji: "🤝",
-        description: "Welcome, stranger!",
+        description: "I've met you off the internet",
     },
     [AuxRole.Work]: {
         id: "work",

@@ -3,11 +3,12 @@ import { RESTJSONErrorCodes } from "discord-api-types/v10";
 import { BotClient, UserClient } from "../discord/client";
 import { authorisePendingUser } from "../discord/messages/join";
 import { OAuthClient } from "../discord/oauth";
-import { Env, getRoleIDFromRole } from "../env";
+import { Env } from "../env";
 import { roleToID } from "../roles";
 import { Sentry } from "../sentry";
 import { formatUser } from "../util";
 import { returnStatus } from "../util/http";
+import { StateStore } from "./interaction/authorise/statestore";
 
 export async function handler(
     req: Request,
@@ -79,8 +80,10 @@ export async function handler(
     let channel = env.GENERAL_CHANNEL;
     if (!applyRole) {
         channel = env.HOLDING_CHANNEL;
+        const stateStore = new StateStore(env.OAUTH_DB, sentry);
         const msg = authorisePendingUser(env, guildMember!);
-        await botClient.createMessage(env.PENDING_CHANNEL, msg);
+        const createdMsg = await botClient.createMessage(env.PENDING_CHANNEL, msg);
+        await stateStore.insertActionMessage(user.id, createdMsg.id);
     }
 
     return Response.redirect(
