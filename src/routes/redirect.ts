@@ -43,6 +43,8 @@ export async function handler(
     return new Response("", {
         status: 302,
         headers: new Headers({
+            // TODO: it'd be nice if we didn't hardcode this, and just
+            // redirected to wherever the user wanted to go
             Location: "/join",
             "Set-Cookie": `auth=${token.accessToken}; Secure`,
         }),

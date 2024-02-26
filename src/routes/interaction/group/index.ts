@@ -1,7 +1,6 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
     ApplicationCommandOptionType,
-    MessageFlags,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 
@@ -16,6 +15,7 @@ import { handler as leaveHandler, subcommand as leaveSubcommand } from "./leave"
 import { handler as listHandler, subcommand as listSubcommand } from "./list";
 import { handler as joinHandler, subcommand as joinSubcommand } from "./join";
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { genericError } from "../../../discord/messages/errors";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
@@ -40,38 +40,33 @@ export async function handler(
     const manager = new GroupManager(
         client,
         env.GUILD_ID,
-        env.MOD_ROLE,
-        env.MEMBER_ROLE,
-        env.GUEST_ROLE
     );
-
-    const flags = MessageFlags.Ephemeral & MessageFlags.Urgent;
 
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in group command";
         sentry.captureMessage(msg, "warning");
-        return { content: msg, flags };
+        return genericError(msg);
     }
 
     const user = interaction.member!.user.id;
     if (options.length !== 1) {
         const msg = `Unexpected number of elements ${options.length}`;
         sentry.captureMessage(msg, "warning");
-        return { content: msg, flags };
+        return genericError(msg);
     }
 
     const option = options[0];
     if (option.type !== ApplicationCommandOptionType.Subcommand) {
         const msg = `Unexpected option type${option.type}`;
         sentry.captureMessage(msg, "warning");
-        return { content: msg, flags };
+        return genericError(msg);
     }
 
     if (!option.options) {
         const msg = "No options in subcommand";
         sentry.captureMessage(msg, "warning");
-        return { content: msg, flags };
+        return genericError(msg);
     }
 
     const subcommandName = option.name;
@@ -82,7 +77,7 @@ export async function handler(
     if (option.options.length !== 1) {
         const msg = `Expected exactly 1 option, got ${option.options.length}`;
         sentry.captureMessage(msg, "warning");
-        return { content: msg, flags };
+        return genericError(msg);
     }
     const subOption = option.options[0];
     if (
@@ -91,21 +86,21 @@ export async function handler(
     ) {
         const msg = `Unexpected option ${subOption}, expected a string with name "name"`;
         sentry.captureMessage(msg, "warning");
-        return { content: msg, flags };
+        return genericError(msg);
     }
 
     const groupName = subOption.value;
 
     switch (option.name) {
         case "create":
-            return await createHandler(manager, groupName, user);
+            return await createHandler(env, manager, groupName, user);
         case "join":
             return await joinHandler(manager, groupName, user);
         case "leave":
             return await leaveHandler(manager, groupName, user);
         case "delete":
-            return await deleteHandler(manager, groupName, user);
+            return await deleteHandler(env, manager, groupName, user);
         default:
-            return { content: `Unknown command ${option.name}`, flags };
+            return genericError(`Unknown command ${option.name}`);
     }
 }

@@ -1,4 +1,6 @@
-import { MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+
+import { genericEphemeral } from "../../discord/messages/errors";
 
 const HELP_TEXT = `
 \`/group list\`: List open groups
@@ -21,5 +23,5 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
 
 
 export const handler = () => {
-    return { content: HELP_TEXT, flags: MessageFlags.Ephemeral };
+    return genericEphemeral(HELP_TEXT);
 };

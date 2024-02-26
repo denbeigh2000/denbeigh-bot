@@ -1,18 +1,15 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
     ApplicationCommandOptionType,
-    MessageFlags,
 } from "discord-api-types/payloads/v10";
-import {
-    Env,
-    Roles,
-    getRoleIDFromRole,
-    getRoleFromRoleID,
-} from "../../env";
+
+import { Env } from "../../env";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { BotClient } from "../../discord/client";
+import { genericEphemeral, genericError } from "../../discord/messages/errors";
 import { Sentry } from "../../sentry";
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { idsToRole, Role, roleToID } from "../../roles";
 
 const USERNAME_PATTERN = /^^.+#[0-9]{4}$/;
 
@@ -58,12 +55,11 @@ export async function handler(
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
     /* TODO: Most of this block should be factored out */
-    const errEphFlags = { flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in promote command";
         sentry.captureMessage(msg, "warning");
-        return { content: msg, ...errEphFlags };
+        return genericError(msg);
     }
 
     const awarder = interaction.member!.user.id;
@@ -95,26 +91,19 @@ export async function handler(
         };
     }
 
-    const validUserRoles = interaction.member.roles.filter(
-        (r) => getRoleFromRoleID(env, r) !== null
-    );
-    if (!validUserRoles) {
+    const userRole = idsToRole(env, interaction.member.roles);
+    if (!userRole) {
         return { content: "You have no valid roles" };
     }
-    const userRoleId = validUserRoles[0];
-    const userRole = getRoleFromRoleID(env, userRoleId)!;
-    if (userRole !== Roles.Moderator && role && userRole <= role) {
-        return {
-            content:
-                "You do not have sufficient privileges to award this role",
-            ...errEphFlags,
-        };
+    if (userRole !== Role.Moderator && role && userRole <= role) {
+        return genericError("You do not have sufficient privileges to award this role");
     }
 
     /* End TODO */
 
-    const roleId = getRoleIDFromRole(env, role)!;
+    const roleId = roleToID(env, role)!;
     await env.OAUTH.put(`preauth:${username}`, role.toString());
+    // TODO: change to newer style with embeds
     await client.createMessage(env.LOG_CHANNEL, {
         content: `<@${awarder}> authorised \`${username}\` to join with the <@&${roleId}> role`,
         allowed_mentions: {
@@ -122,11 +111,8 @@ export async function handler(
         },
     });
 
-    return {
-        content: [
-            `OK, \`${username}\` can join with the <@&${roleId}> role.`,
-            "Send invite link: https://discord.denb.ee/join",
-        ].join("\n\n"),
-        flags: MessageFlags.Ephemeral,
-    };
+    return genericEphemeral([
+        `OK, \`${username}\` can join with the <@&${roleId}> role.`,
+        "Send invite link: https://discord.denb.ee/join",
+    ].join("\n\n"));
 }

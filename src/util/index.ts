@@ -9,7 +9,9 @@ export async function sha256sum(input: string): Promise<string> {
 }
 
 export function formatUser(user: APIUser): string {
-    return (user.discriminator === "0" || !user.discriminator)
+    // If the discriminator is zero/falsy (has moved), just return the username
+    // Otherwise, format with the discriminator
+    return (Number(user.discriminator || null) === 0)
         ? user.username
         : `${user.username}#${user.discriminator}`;
 }

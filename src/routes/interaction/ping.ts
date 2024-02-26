@@ -1,4 +1,6 @@
-import { MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+
+import { genericEphemeral } from "../../discord/messages/errors";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "ping",
@@ -6,5 +8,5 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
 };
 
 export const handler = () => {
-    return { content: "Pong", flags: MessageFlags.Ephemeral };
+    return genericEphemeral("Pong");
 };

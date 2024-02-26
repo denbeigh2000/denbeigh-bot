@@ -1,12 +1,14 @@
-import { APIUser } from "discord-api-types/payloads/v10";
 import { RESTJSONErrorCodes } from "discord-api-types/v10";
 
 import { BotClient, UserClient } from "../discord/client";
+import { authorisePendingUser } from "../discord/messages/join";
 import { OAuthClient } from "../discord/oauth";
-import { Env, getRoleIDFromRole } from "../env";
+import { Env } from "../env";
+import { roleToID } from "../roles";
 import { Sentry } from "../sentry";
 import { formatUser } from "../util";
 import { returnStatus } from "../util/http";
+import { StateStore } from "./interaction/authorise/statestore";
 
 export async function handler(
     req: Request,
@@ -36,7 +38,7 @@ export async function handler(
     }
 
     const botClient = new BotClient(env.BOT_TOKEN, sentry);
-    const guildMember = await botClient.getGuildMember(
+    let guildMember = await botClient.getGuildMember(
         env.GUILD_ID,
         user.id
     );
@@ -53,13 +55,13 @@ export async function handler(
     const preauthKey = `preauth:${username}`;
     const preauth = await env.OAUTH.get(preauthKey);
     if (preauth) {
-        applyRole = getRoleIDFromRole(env, parseInt(preauth))!;
+        applyRole = roleToID(env, parseInt(preauth))!;
         await env.OAUTH.delete(preauthKey);
     }
 
     const applyRoles = applyRole ? [applyRole] : [];
     try {
-        await botClient.joinGuild(
+        guildMember = await botClient.joinGuild(
             env.GUILD_ID,
             token,
             user.id,
@@ -78,71 +80,18 @@ export async function handler(
     let channel = env.GENERAL_CHANNEL;
     if (!applyRole) {
         channel = env.HOLDING_CHANNEL;
-        await postPendingMessage(botClient, env, user);
+        const stateStore = new StateStore(env.OAUTH_DB, sentry);
+        const msg = authorisePendingUser(env, guildMember!);
+        // NOTE: don't create a new message (and conflicting DB entry) if the
+        // user already has a pending entry in the server
+        const existingMsg = await stateStore.getActionMessage(user.id);
+        if (!existingMsg) {
+            const createdMsg = await botClient.createMessage(env.PENDING_CHANNEL, msg);
+            await stateStore.insertActionMessage(user.id, createdMsg.id);
+        }
     }
 
     return Response.redirect(
         `https://discord.com/channels/${env.GUILD_ID}/${channel}`
     );
 }
-
-async function postPendingMessage(
-    botClient: BotClient,
-    env: Env,
-    user: APIUser
-) {
-    await botClient.createMessage(env.PENDING_CHANNEL, {
-        content: [
-            `\`${formatUser(user)}\` has joined the waiting room.`,
-            `What would you like to do?`,
-            `<@&${env.MOD_ROLE}>`,
-        ].join("\n\n"),
-        components: [
-            {
-                type: 1,
-                components: [
-                    {
-                        custom_id: `action_${user.id}`,
-                        options: [
-                            {
-                                label: `Accept as Guest`,
-                                value: `accept_guest`,
-                                description: `Add the user with the Guest role`,
-                                default: false,
-                            },
-                            {
-                                label: `Accept as Member`,
-                                value: `accept_member`,
-                                description: `Add the user with the Member role`,
-                                default: false,
-                            },
-                            {
-                                label: `Accept as Moderator`,
-                                value: `accept_moderator`,
-                                description: `Add the user with the Moderator role`,
-                                default: false,
-                            },
-                            {
-                                label: `Ignore`,
-                                value: `reject_ignore`,
-                                description: `Do not add the user`,
-                                default: false,
-                            },
-                            // TODO
-                            // {
-                            //     label: `Ban`,
-                            //     value: `reject_ban`,
-                            //     djscription: `Do not add the user, and ban them from the server`,
-                            //     default: false
-                            // }
-                        ],
-                        min_values: 1,
-                        max_values: 1,
-                        type: 3,
-                    },
-                ],
-            },
-        ],
-    });
-}
-

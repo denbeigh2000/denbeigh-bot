@@ -1,4 +1,8 @@
-import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, MessageFlags, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+
+import { genericEphemeral, genericError } from "../../../discord/messages/errors";
+import { Env } from "../../../env";
+import { idsToRole, Role } from "../../../roles";
 import { GroupManager } from "./manager";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {
@@ -17,41 +21,26 @@ export const subcommand: APIApplicationCommandSubcommandOption = {
 };
 
 export const handler = async (
+    env: Env,
     manager: GroupManager,
     name: string,
     userId: string,
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> => {
-    const flags = MessageFlags.Ephemeral & MessageFlags.Urgent;
     const user = await manager.getGuildMember(userId);
     if (!user) {
-        return {
-            content: "You are not in this guild (somehow??)",
-            flags,
-        };
+        return genericError("You are not in this guild (somehow??)");
     }
 
-    if (
-        !(
-            user.roles.includes(manager.memberRole) ||
-            user.roles.includes(manager.modRole)
-        )
-    ) {
-        return {
-            content: "You are not authorised to delete roles",
-            flags,
-        };
+    const userRole = idsToRole(env, user.roles);
+
+    if (userRole && userRole < Role.Member) {
+        return genericError("You are not authorised to delete groups");
     }
 
     const deletedGroup = manager.deleteGroup(name);
     if (!deletedGroup) {
-        return {
-            content: `No group named \`${name}\``,
-            flags,
-        };
+        return genericError(`No group named \`${name}\``);
     }
 
-    return {
-        content: `Deleted group \`${name}\``,
-        flags: MessageFlags.Ephemeral,
-    };
+    return genericEphemeral(`Deleted group \`${name}\``)
 }

@@ -1,12 +1,13 @@
 // This is fine, typescript is fine.
 import { Snowflake } from "discord-api-types/globals";
-import { Routes } from "discord-api-types/rest/v10";
+import { RESTGetAPIUserResult, Routes } from "discord-api-types/rest/v10";
 
 import {
     APIApplicationCommand,
     APIGuildMember,
     APIMessage,
     APIRole,
+    APIUser,
 } from "discord-api-types/payloads/v10";
 
 import { RESTJSONErrorCodes } from "discord-api-types/rest/v10";
@@ -31,6 +32,7 @@ import {
 } from "discord-api-types/rest/v10/interactions";
 
 import {
+    RESTDeleteAPIGuildBanResult,
     RESTDeleteAPIGuildMemberResult,
     RESTDeleteAPIGuildMemberRoleResult,
     RESTDeleteAPIGuildRoleResult,
@@ -38,6 +40,8 @@ import {
     RESTGetAPIGuildRolesResult,
     RESTPostAPIGuildRoleJSONBody,
     RESTPostAPIGuildRoleResult,
+    RESTPutAPIGuildBanJSONBody,
+    RESTPutAPIGuildBanResult,
     RESTPutAPIGuildMemberJSONBody,
     RESTPutAPIGuildMemberResult,
     RESTPutAPIGuildMemberRoleResult,
@@ -79,6 +83,16 @@ export class BotClient extends Client {
             }
 
             throw e;
+        }
+    }
+
+    public async getUser(userId: Snowflake): Promise<APIUser | null> {
+        const route = Routes.user(userId);
+        try {
+            return await this.rest.get(route) as RESTGetAPIUserResult;
+        } catch (e) {
+            this.sentry.captureException(e);
+            return null;
         }
     }
 
@@ -162,6 +176,19 @@ export class BotClient extends Client {
     public async kickUser(guildId: Snowflake, userId: Snowflake) {
         const route = Routes.guildMember(guildId, userId);
         await this.rest.delete(route) as RESTDeleteAPIGuildMemberResult;
+    }
+
+    public async banUser(guildId: Snowflake, userId: Snowflake, deleteMessageSeconds: number = 0) {
+        const route = Routes.guildBan(guildId, userId);
+        const body: RESTPutAPIGuildBanJSONBody = {
+            delete_message_seconds: deleteMessageSeconds,
+        }
+        await this.rest.put(route, { body }) as RESTPutAPIGuildBanResult;
+    }
+
+    public async unbanUser(guildId: Snowflake, userId: Snowflake) {
+        const route = Routes.guildBan(guildId, userId);
+        await this.rest.delete(route) as RESTDeleteAPIGuildBanResult;
     }
 
     public async deleteMessage(channelId: Snowflake, messageId: Snowflake) {

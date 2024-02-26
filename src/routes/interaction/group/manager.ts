@@ -66,22 +66,12 @@ export class GroupManager {
     client: BotClient;
     guildId: string;
 
-    public modRole: string;
-    public memberRole: string;
-    public guestRole: string;
-
     constructor(
         discordClient: BotClient,
         guildId: string,
-        modRole: string,
-        memberRole: string,
-        guestRole: string
     ) {
         this.client = discordClient;
         this.guildId = guildId;
-        this.memberRole = memberRole;
-        this.modRole = modRole;
-        this.guestRole = guestRole;
     }
 
     public async listGroups(): Promise<Group[]> {

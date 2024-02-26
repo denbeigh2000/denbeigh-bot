@@ -1,17 +1,15 @@
 import {
     APIChatInputApplicationCommandGuildInteraction,
     ApplicationCommandOptionType,
-    MessageFlags,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+
 import { BotClient } from "../../discord/client";
-import {
-    Env,
-    getRoleFromRoleID,
-    getRoleIDFromRole,
-    Roles,
-} from "../../env";
+import { genericEphemeral, genericError } from "../../discord/messages/errors";
+import { changedRole } from "../../discord/messages/log";
+import { Env } from "../../env";
+import { idsToRole, Role, roleToID } from "../../roles";
 import { Sentry } from "../../sentry";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
@@ -55,23 +53,24 @@ export async function handler(
     _ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
-    const ephFlags = { flags: MessageFlags.Ephemeral };
+    const now = new Date();
+
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in promote command";
         sentry.captureMessage(msg, "warning");
-        return { content: msg, ...ephFlags };
+        return genericEphemeral(msg);
     }
 
-    const awarder = interaction.member!.user.id;
+    const changer = interaction.member;
     let role: number | null = null;
-    let userId: string | null = null;
+    let changeeUserId: string | null = null;
     for (const option of options) {
         if (
             option.name === "user" &&
             option.type === ApplicationCommandOptionType.User
         ) {
-            userId = option.value;
+            changeeUserId = option.value;
         } else if (
             option.name === "role" &&
             option.type === ApplicationCommandOptionType.Integer
@@ -80,44 +79,44 @@ export async function handler(
         }
     }
 
-    if (!userId || !role) {
-        const msg = `Missing one of user id (${userId}) or role id (${role})`;
+    if (!changeeUserId || !role) {
+        const msg = `Missing one of user id (${changeeUserId}) or role id (${role})`;
         sentry.captureMessage(msg, "warning");
-        return { content: msg, ...ephFlags };
+        return genericEphemeral(msg);
     }
 
-    const validUserRoles = interaction.member.roles.filter(
-        (r) => getRoleFromRoleID(env, r) !== null
-    );
-    if (!validUserRoles) {
-        return { content: "You have no valid roles", ...ephFlags };
-    }
-    const userRoleId = validUserRoles[0];
-    const userRole = getRoleFromRoleID(env, userRoleId)!;
-    if (userRole !== Roles.Moderator && role && userRole <= role) {
-        return {
-            content:
-                "You do not have sufficient privileges for this promotion",
-            ...ephFlags,
-        };
+    // Assuming user is still in the guild, because surely the call above would
+    // have failed if they had left...
+    const changee = (await client.getGuildMember(env.GUILD_ID, changeeUserId));
+    if (!changee) {
+        return genericError(`<@${changeeUserId}> user no longer seems to be in the server?`);
     }
 
-    const roleId = getRoleIDFromRole(env, role)!;
+    const oldRole = idsToRole(env, changee.roles) || 0;
+    const changerRole = idsToRole(env, interaction.member.roles);
+    if (!changerRole) {
+        return genericError("You have no valid roles");
+    }
+    if (changer.user.id !== env.DENBEIGH_USER && changerRole !== Role.Moderator) {
+        return genericError("You must be a moderator to change roles.");
+    }
+    if (changer.user.id !== env.DENBEIGH_USER && changerRole <= role) {
+        return genericError("You cannot promote somebody to the same level as/above yourself");
+    }
+    if (changer.user.id !== env.DENBEIGH_USER && changerRole <= oldRole) {
+        return genericError("To update the roles of somebody else, you must be of a higher role than them.");
+    }
+
+    const roleId = roleToID(env, role)!;
     await client.setManagedRole(
         interaction.guild_id!,
         [env.MOD_ROLE, env.MEMBER_ROLE, env.GUEST_ROLE],
-        userId,
+        changeeUserId,
         roleId
     );
-    await client.createMessage(env.LOG_CHANNEL, {
-        content: `<@${awarder}> awarded <@${userId}> the <@&${roleId}> role`,
-        allowed_mentions: {
-            users: [userId, awarder],
-        },
-    });
 
-    return {
-        content: `OK, awarded <@${userId}> the <@&${roleId}> role.`,
-        ...ephFlags,
-    };
+    const msg = changedRole(env, changer, changee, now, role);
+    await client.createMessage(env.LOG_CHANNEL, msg);
+
+    return genericEphemeral(`OK, awarded <@${changeeUserId}> the <@&${roleId}> role.`);
 }

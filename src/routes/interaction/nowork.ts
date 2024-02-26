@@ -6,7 +6,9 @@ import {
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+
 import { BotClient } from "../../discord/client";
+import { genericError } from "../../discord/messages/errors";
 import { Env } from "../../env";
 import { Sentry } from "../../sentry";
 
@@ -53,14 +55,14 @@ export async function handler(
         if (opt.type !== ApplicationCommandOptionType.User) {
             const msg = `Bad option type: ${opt.type}`;
             sentry.captureMessage(msg, "warning");
-            return { content: msg, flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
+            return genericError(msg);
         }
 
         user = opt.value;
     } else {
         const msg = "Too many options given";
         sentry.captureMessage(msg, "warning");
-        return { content: msg, flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
+        return genericError(msg);
     }
 
     const content = buildMessage(user);

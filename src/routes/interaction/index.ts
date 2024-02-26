@@ -3,21 +3,22 @@ import {
     APIMessageComponentSelectMenuInteraction,
     InteractionResponseType,
     InteractionType,
-    MessageFlags,
 } from "discord-api-types/payloads/v10";
-import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { MessageFlags, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
 import { BotClient } from "../../discord/client";
 import verify from "../../discord/verify";
-import { Env, Roles, getRoleIDFromRole, getUserRole } from "../../env";
+import { Env } from "../../env";
 import { Sentry } from "../../sentry";
 import { returnJSON, returnStatus } from "../../util/http";
 
+import { handler as handleAuthorise } from "./authorise";
 import { handler as handleGroup } from "./group";
 import { handler as handleInvite } from "./invite";
 import { handler as handleNoWork } from "./nowork";
 import { handler as handlePromote } from "./promote";
 import { handler as handlePing } from "./ping";
 import { handler as handleHelp } from "./help";
+import { genericEphemeral, genericError } from "../../discord/messages/errors";
 
 export async function handler(
     request: Request,
@@ -56,18 +57,16 @@ export async function handler(
             if (!type) {
                 return returnJSON({
                     type: InteractionResponseType.ChannelMessageWithSource,
-                    data: {
-                        flags: MessageFlags.Ephemeral,
-                        content: `No such command: ${interaction.data.name}`,
-                    },
+                    data: genericError(`No such command: ${interaction.data.name}`),
                 });
             }
 
             const resp = await handleCommand(type, interaction, env, ctx, sentry);
             let msg = resp
             if (!resp) {
-                msg = { content: "OK", flags: MessageFlags.Ephemeral };
+                msg = genericEphemeral("OK");
             }
+
             return returnJSON({
                 type: InteractionResponseType.ChannelMessageWithSource,
                 data: msg,
@@ -140,104 +139,20 @@ async function handleCommand(
 async function handleMessageComponent(
     interaction: APIMessageComponentSelectMenuInteraction,
     env: Env,
-    _ctx: ExecutionContext,
+    ctx: ExecutionContext,
     sentry: Sentry
 ) {
     const customId = interaction.data.custom_id;
-    if (!customId.startsWith("action_")) {
-        sentry.captureMessage(
-            `Unhandled custom_id: ${customId}`,
-            "warning"
-        );
-        return;
-    }
-
-    const fragments = customId.split("_");
-    if (fragments.length !== 2) {
-        // TODO: Better validation
-        throw new Error(`invalid fragments ${fragments}`);
-    }
-
-    const confirmerId = interaction.member!.user.id;
-    const userId = fragments[1];
-    const botClient = new BotClient(env.BOT_TOKEN, sentry);
-    const action = interaction.data.values[0];
-
-    let role: Roles | null = null;
+    const [action] = customId.split("_", 1);
     switch (action) {
-        case "reject_ignore":
-            break;
-        case "accept_guest":
-            role = Roles.Guest;
-            break;
-        case "accept_member":
-            role = Roles.Member;
-            break;
-        case "accept_moderator":
-            role = Roles.Moderator;
+        case "authorise":
+            await handleAuthorise(interaction, env, ctx, sentry);
             break;
         default:
             sentry.captureMessage(
-                `unhandled select value ${action}`,
+                `Unhandled custom_id: ${customId}`,
                 "warning"
             );
             return;
     }
-
-    const userRole = getUserRole(env, interaction.member!.roles);
-    if (!userRole) {
-        await botClient.sendFollowup(
-            env.CLIENT_ID,
-            interaction.token,
-            {
-                content: "You have no valid roles",
-                flags: MessageFlags.Ephemeral,
-            }
-        );
-        return;
-    }
-
-    const isNotMod = userRole < Roles.Moderator;
-    const isGuest = userRole < Roles.Member;
-    const roleNotAboveAwarding = role && userRole <= role;
-    if (isGuest || (isNotMod && roleNotAboveAwarding)) {
-        await botClient.sendFollowup(
-            env.CLIENT_ID,
-            interaction.token,
-            {
-                content:
-                    "You do not have sufficient privileges to grant this",
-                flags: MessageFlags.Ephemeral,
-            }
-        );
-        return;
-    }
-
-    let logMessage: string;
-    if (role) {
-        const applyRole = getRoleIDFromRole(env, role)!;
-        await botClient.addRole(
-            interaction.guild_id!,
-            userId,
-            applyRole
-        );
-        logMessage = `admitted <@${userId}> with the <@&${applyRole}> role`;
-    } else {
-        await botClient.kickUser(interaction.guild_id!, userId);
-        logMessage = `kicked <@${userId}>`;
-    }
-    await botClient.createMessage(env.LOG_CHANNEL, {
-        content: [
-            `<@${confirmerId}> ${logMessage}`,
-            `<@&${env.MOD_ROLE}>`,
-        ].join("\n\n"),
-        allowed_mentions: {
-            roles: [env.MOD_ROLE],
-            users: [userId, confirmerId],
-        },
-    });
-    await botClient.deleteMessage(
-        env.PENDING_CHANNEL,
-        interaction.message.id
-    );
 }
