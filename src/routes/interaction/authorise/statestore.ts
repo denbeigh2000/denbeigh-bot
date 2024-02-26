@@ -126,6 +126,20 @@ export class StateStore {
         });
     }
 
+    private deleteStateQuery(targetUser: Snowflake): Query {
+        return this.db.delete({
+            tableName: PENDING_TABLE,
+            where: {
+                conditions: "target_user_id = ?1",
+                params: [targetUser],
+            },
+        });
+    }
+
+    public async end(targetUser: Snowflake): Promise<void> {
+        await this.deleteStateQuery(targetUser).execute();
+    }
+
     public async validateAndEnd(targetUser: Snowflake, interactor: Snowflake): Promise<Results | null> {
         let state: D1ResultOne;
         try {
@@ -151,13 +165,7 @@ export class StateStore {
         }
 
         const getQuery = this.selectStateQuery(targetUser, interactor);
-        const deleteQuery = this.db.delete({
-            tableName: PENDING_TABLE,
-            where: {
-                conditions: "target_user_id = ?1",
-                params: [targetUser],
-            },
-        });
+        const deleteQuery = this.deleteStateQuery(targetUser);
 
         let batchResults: [D1ResultOne, D1Result];
         try {

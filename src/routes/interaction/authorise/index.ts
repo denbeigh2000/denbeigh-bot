@@ -82,12 +82,6 @@ async function handleButton(interaction: APIMessageComponentGuildInteraction, en
         return false;
     }
 
-    const state = await stateStore.validateAndEnd(userID, interactor.user.id);
-    if (!state) {
-        console.warn("tried to end a thing that may have raced?");
-        return false;
-    }
-
     const member = await getBestUser(botClient, env.GUILD_ID, userID);
     switch (action) {
         case "accept":
@@ -100,12 +94,21 @@ async function handleButton(interaction: APIMessageComponentGuildInteraction, en
 
                 return false;
             }
+
+            const state = await stateStore.validateAndEnd(userID, interactor.user.id);
+            if (!state) {
+                console.warn("tried to end a thing that may have raced?");
+                return false;
+            }
+
             await handleAccept(env, now, member.data, interactor, state, botClient);
             break;
         case "ignore":
+            await stateStore.end(getMultiUserId(member))
             await handleIgnore(env, member, botClient);
             break;
         case "ban":
+            await stateStore.end(getMultiUserId(member))
             await handleBan(env, now, member, interactor, botClient);
             break;
     }

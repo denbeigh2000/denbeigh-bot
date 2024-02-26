@@ -6,6 +6,12 @@ import { formatUser } from "../util";
 const IMAGE_BASE = "https://cdn.discordapp.com";
 const DISCORD_EPOCH = 1420070400000
 
+export const COLOURS = {
+    RED: 0xED4245,
+    GREEN: 0x57F287,
+    BLURPLE: 0xc9a2d7,
+};
+
 
 export function avatarURL(userID: string, avatarID: string): string {
     return `${IMAGE_BASE}/avatars/${userID}/${avatarID}.png`;

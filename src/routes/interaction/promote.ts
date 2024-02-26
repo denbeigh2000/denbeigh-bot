@@ -62,16 +62,15 @@ export async function handler(
         return genericEphemeral(msg);
     }
 
-    const awarder = interaction.member;
-    const awarderID = awarder.user.id;
+    const changer = interaction.member;
     let role: number | null = null;
-    let userId: string | null = null;
+    let changeeUserId: string | null = null;
     for (const option of options) {
         if (
             option.name === "user" &&
             option.type === ApplicationCommandOptionType.User
         ) {
-            userId = option.value;
+            changeeUserId = option.value;
         } else if (
             option.name === "role" &&
             option.type === ApplicationCommandOptionType.Integer
@@ -80,37 +79,44 @@ export async function handler(
         }
     }
 
-    if (!userId || !role) {
-        const msg = `Missing one of user id (${userId}) or role id (${role})`;
+    if (!changeeUserId || !role) {
+        const msg = `Missing one of user id (${changeeUserId}) or role id (${role})`;
         sentry.captureMessage(msg, "warning");
         return genericEphemeral(msg);
     }
 
-    const userRole = idsToRole(env, interaction.member.roles);
-    if (!userRole) {
-        return genericError("You have no valid roles");
-    }
-    if (userRole !== Role.Moderator && role && userRole <= role) {
-        return genericError("You do not have sufficient privileges for this promotion");
-    }
-
     // Assuming user is still in the guild, because surely the call above would
     // have failed if they had left...
-    const user = (await client.getGuildMember(env.GUILD_ID, userId));
-    if (!user) {
-        return genericError(`<@${userId}> user no longer seems to be in the server?`);
+    const changee = (await client.getGuildMember(env.GUILD_ID, changeeUserId));
+    if (!changee) {
+        return genericError(`<@${changeeUserId}> user no longer seems to be in the server?`);
+    }
+
+    const oldRole = idsToRole(env, changee.roles) || 0;
+    const changerRole = idsToRole(env, interaction.member.roles);
+    if (!changerRole) {
+        return genericError("You have no valid roles");
+    }
+    if (changer.user.id !== env.DENBEIGH_USER && changerRole !== Role.Moderator) {
+        return genericError("You must be a moderator to change roles.");
+    }
+    if (changer.user.id !== env.DENBEIGH_USER && changerRole <= role) {
+        return genericError("You cannot promote somebody to the same level as/above yourself");
+    }
+    if (changer.user.id !== env.DENBEIGH_USER && changerRole <= oldRole) {
+        return genericError("To update the roles of somebody else, you must be of a higher role than them.");
     }
 
     const roleId = roleToID(env, role)!;
     await client.setManagedRole(
         interaction.guild_id!,
         [env.MOD_ROLE, env.MEMBER_ROLE, env.GUEST_ROLE],
-        userId,
+        changeeUserId,
         roleId
     );
 
-    const msg = changedRole(env, awarder, user, now, role);
+    const msg = changedRole(env, changer, changee, now, role);
     await client.createMessage(env.LOG_CHANNEL, msg);
 
-    return genericEphemeral(`OK, awarded <@${userId}> the <@&${roleId}> role.`);
+    return genericEphemeral(`OK, awarded <@${changeeUserId}> the <@&${roleId}> role.`);
 }

@@ -4,7 +4,7 @@ import {
     InteractionResponseType,
     InteractionType,
 } from "discord-api-types/payloads/v10";
-import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { MessageFlags, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
 import { BotClient } from "../../discord/client";
 import verify from "../../discord/verify";
 import { Env } from "../../env";
@@ -66,6 +66,7 @@ export async function handler(
             if (!resp) {
                 msg = genericEphemeral("OK");
             }
+
             return returnJSON({
                 type: InteractionResponseType.ChannelMessageWithSource,
                 data: msg,

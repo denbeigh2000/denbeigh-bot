@@ -8,12 +8,10 @@ import {
     Snowflake,
 } from "discord-api-types/v10";
 
-import { avatarURL, convertSnowflakeToDate } from "..";
+import { avatarURL, COLOURS, convertSnowflakeToDate } from "..";
 import { Env } from "../../env";
 import { AUX_ROLE_META, RoleMeta, ROLE_META } from "../../roles";
 import { formatUser } from "../../util";
-
-const BLURPLE = 0xc9a2d7;
 
 function renderRole(role: RoleMeta): APISelectMenuOption {
     return {
@@ -100,15 +98,13 @@ export function authorisePendingUser(env: Env, guildMember: APIGuildMember): RES
     }
 
     // Use either the user's accent colour, or blurple
-    const colour = user.accent_color || BLURPLE;
+    const colour = user.accent_color || COLOURS.BLURPLE;
     return {
+        content: `<@&${env.MOD_ROLE}>`,
         embeds: [
             {
                 title: "A new user has joined",
-                description: [
-                    "What would you like to do?",
-                    `<@&${env.MOD_ROLE}>`,
-                ].join("\n\n"),
+                description: "What would you like to do?",
                 color: colour,
                 fields,
                 timestamp: joinedAt.toISOString(),

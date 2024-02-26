@@ -5,5 +5,5 @@ export function genericEphemeral(content: string): RESTPostAPIWebhookWithTokenJS
 }
 
 export function genericError(content: string) {
-    return { content, flags: MessageFlags.Ephemeral & MessageFlags.Urgent };
+    return { content, flags: MessageFlags.Ephemeral | MessageFlags.Urgent };
 }

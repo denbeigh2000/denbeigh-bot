@@ -1,18 +1,17 @@
 import { APIGuildMember, RESTPostAPIChannelMessageJSONBody } from "discord-api-types/v10";
-import { avatarURL, convertSnowflakeToDate, formatMultiUser, getMultiUserAvatar, getMultiUserId, GuildMemberUser, NonGuildMemberUser, SnowflakeUser } from "..";
+import { avatarURL, COLOURS, convertSnowflakeToDate, formatMultiUser, getMultiUserAvatar, getMultiUserId, GuildMemberUser, NonGuildMemberUser, SnowflakeUser } from "..";
 
 import { Env, } from "../../env";
 import { AuxRole, AUX_ROLE_META, Role, RoleMeta, ROLE_META } from "../../roles";
 import { formatUser } from "../../util";
 
-function renderRole(meta: RoleMeta): string {
+function renderRoleList(meta: RoleMeta): string {
     return `- ${meta.emoji} ${meta.friendlyName}`;
 }
 
-const COLOURS = {
-    RED: 0xED4245,
-    GREEN: 0x57F287,
-};
+function renderRole(meta: RoleMeta): string {
+    return `${meta.emoji} ${meta.friendlyName}`;
+}
 
 function toEpoch(d: Date): number {
     return Math.round(Number(d) / 1000);
@@ -112,7 +111,7 @@ export function admittedUser(
                     },
                     {
                         name: "Extra roles",
-                        value: auxRoles.map(r => renderRole(AUX_ROLE_META[r])).join('\n'),
+                        value: auxRoles.map(r => renderRoleList(AUX_ROLE_META[r])).join('\n'),
                     },
                     {
                         name: "Admitted",
@@ -152,13 +151,16 @@ export function changedRole(
         height: 0,
         width: 0
     } : undefined;
+
+    // Use either the user's accent colour, or blurple
+    const colour = targetUser.accent_color || COLOURS.BLURPLE;
     return {
         content: `<@&${env.MOD_ROLE}>`,
         embeds: [
             {
-                title: "User admitted",
-                description: formatUser(targetUser),
-                color: COLOURS.GREEN,
+                title: "User role changed",
+                description: `<@${targetUser.id}>`,
+                color: colour,
                 fields: [
                     {
                         name: "Changed by",
@@ -176,7 +178,7 @@ export function changedRole(
                 timestamp: changedAt.toISOString(),
                 thumbnail,
                 author: {
-                    name: formatUser(targetUser),
+                    name: formatUser(actorUser),
                     icon_url: actorUser.avatar ? avatarURL(actorID, actorUser!.avatar) : undefined,
                 }
             }
