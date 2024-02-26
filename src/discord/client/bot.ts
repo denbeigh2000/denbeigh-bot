@@ -1,12 +1,13 @@
 // This is fine, typescript is fine.
 import { Snowflake } from "discord-api-types/globals";
-import { Routes } from "discord-api-types/rest/v10";
+import { RESTGetAPIUserResult, Routes } from "discord-api-types/rest/v10";
 
 import {
     APIApplicationCommand,
     APIGuildMember,
     APIMessage,
     APIRole,
+    APIUser,
 } from "discord-api-types/payloads/v10";
 
 import { RESTJSONErrorCodes } from "discord-api-types/rest/v10";
@@ -82,6 +83,16 @@ export class BotClient extends Client {
             }
 
             throw e;
+        }
+    }
+
+    public async getUser(userId: Snowflake): Promise<APIUser | null> {
+        const route = Routes.user(userId);
+        try {
+            return await this.rest.get(route) as RESTGetAPIUserResult;
+        } catch (e) {
+            this.sentry.captureException(e);
+            return null;
         }
     }
 

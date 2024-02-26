@@ -1,15 +1,17 @@
 import {
     APIGuildMember,
-    APIMessageComponentInteraction, APIMessageComponentSelectMenuInteraction, APIMessageStringSelectInteractionData, APIUser, ComponentType, MessageFlags,
+    APIMessageComponentInteraction, APIMessageStringSelectInteractionData, ComponentType, MessageFlags,
 } from "discord-api-types/payloads/v10";
 
 import { BotClient } from "../../../discord/client";
+import { genericEphemeral } from "../../../discord/messages/errors";
 import { admittedUser, bannedUser } from "../../../discord/messages/log";
 import { Env } from "../../../env";
 import { Sentry } from "../../../sentry";
 import { Snowflake } from "discord-api-types/globals";
 import { Results, StateStore } from "./statestore";
 import { auxRoleToID, idsToRole, ID_TO_AUX_ROLE, ID_TO_ROLE, roleToID } from "../../../roles";
+import { getMultiUserId, MultiUser } from "../../../discord";
 
 async function handleAccept(env: Env, now: Date, admitted: APIGuildMember, admitter: APIGuildMember, state: Results, botClient: BotClient): Promise<boolean> {
     const { role, auxRoles } = state;
@@ -25,20 +27,31 @@ async function handleAccept(env: Env, now: Date, admitted: APIGuildMember, admit
     return true;
 }
 
-// NOTE: banned needs to be more resilient, because they may already be out of
-// the server.
-async function handleBan(env: Env, now: Date, banned: APIGuildMember, banner: APIGuildMember, botClient: BotClient): Promise<boolean> {
-    // TODO: user banning
-    await botClient.banUser(env.GUILD_ID, banned.user!.id);
-    const msg = bannedUser(env, banner, banned, now);
+async function handleBan(env: Env, now: Date, banned: MultiUser, banner: APIGuildMember, botClient: BotClient): Promise<boolean> {
+    await botClient.banUser(env.GUILD_ID, getMultiUserId(banned));
+    const msg = bannedUser(env, banner, banned!, now);
     await botClient.createMessage(env.LOG_CHANNEL, msg);
 
     return true;
 }
 
-async function handleIgnore(env: Env, banned: APIGuildMember, botClient: BotClient): Promise<boolean> {
-    await botClient.kickUser(env.GUILD_ID, banned.user!.id);
+async function handleIgnore(env: Env, banned: MultiUser, botClient: BotClient): Promise<boolean> {
+    await botClient.kickUser(env.GUILD_ID, getMultiUserId(banned));
     return true;
+}
+
+async function getBestUser(botClient: BotClient, guildID: Snowflake, userID: Snowflake): Promise<MultiUser> {
+    const guildMember = await botClient.getGuildMember(guildID, userID);
+    if (guildMember) {
+        return { type: "guildMember", data: guildMember };
+    }
+
+    const user = await botClient.getUser(userID);
+    if (user) {
+        return { type: "user", data: user };
+    }
+
+    return { type: "snowflake", data: userID };
 }
 
 async function handleButton(interaction: APIMessageComponentInteraction, env: Env, now: Date, action: String, userID: Snowflake, botClient: BotClient, sentry: Sentry): Promise<boolean> {
@@ -52,22 +65,6 @@ async function handleButton(interaction: APIMessageComponentInteraction, env: En
         default:
             sentry.captureMessage(`Unknown action: ${action}`, "error");
             return false;
-    }
-
-    // TODO: better defensiveness in case this was done in a dm...somehow?
-    const member = await botClient.getGuildMember(interaction.guild_id!, userID);
-    // TODO: this is going to change shortly to support bans, too
-    if (!member) {
-        await botClient.sendFollowup(
-            env.CLIENT_ID,
-            interaction.token,
-            {
-                content: "This user could not be found (did they leave?)",
-                flags: MessageFlags.Ephemeral,
-            }
-        );
-
-        return false;
     }
 
     // NOTE: i believe this is always the case when this is called from within
@@ -93,9 +90,19 @@ async function handleButton(interaction: APIMessageComponentInteraction, env: En
         return false;
     }
 
+    const member = await getBestUser(botClient, env.GUILD_ID, userID);
     switch (action) {
         case "accept":
-            await handleAccept(env, now, member, interactor, state, botClient);
+            if (member.type !== "guildMember") {
+                await botClient.sendFollowup(
+                    env.CLIENT_ID,
+                    interaction.token,
+                    genericEphemeral("This user could not be found (did they leave?)"),
+                );
+
+                return false;
+            }
+            await handleAccept(env, now, member.data, interactor, state, botClient);
             break;
         case "ignore":
             await handleIgnore(env, member, botClient);
@@ -129,8 +136,8 @@ async function handleSelect(data: APIMessageStringSelectInteractionData, env: En
             return;
 
         default:
-            // TODO: sentry, etc
-            console.error(`unknwon action ${action}`);
+            // TODO: Should we respond to this with a 400 or something?
+            sentry.captureMessage(`unknown action ${action}`, "error");
             return;
     }
 }

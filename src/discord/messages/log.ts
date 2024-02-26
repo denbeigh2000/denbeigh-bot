@@ -1,5 +1,5 @@
 import { APIGuildMember, RESTPostAPIChannelMessageJSONBody } from "discord-api-types/v10";
-import { avatarURL, convertSnowflakeToDate } from "..";
+import { avatarURL, convertSnowflakeToDate, formatMultiUser, getMultiUserAvatar, getMultiUserId, GuildMemberUser, NonGuildMemberUser, SnowflakeUser } from "..";
 
 import { Env, } from "../../env";
 import { AuxRole, AUX_ROLE_META, Role, RoleMeta, ROLE_META } from "../../roles";
@@ -14,27 +14,35 @@ const COLOURS = {
     GREEN: 0x57F287,
 };
 
+function toEpoch(d: Date): number {
+    return Math.round(Number(d) / 1000);
+}
+
 export function bannedUser(
     env: Env,
     banner: APIGuildMember,
-    bannee: APIGuildMember,
+    bannee: GuildMemberUser | NonGuildMemberUser | SnowflakeUser,
     bannedAt: Date,
 ): RESTPostAPIChannelMessageJSONBody {
-    const joinTS = Number(convertSnowflakeToDate(bannee.user!.id)) / 1000;
-    const banTS = Number(bannedAt) / 1000;
-
-    const banneeUser = bannee.user!;
-    const banneeID = banneeUser.id;
+    const banneeID = getMultiUserId(bannee);
+    const joinTS = toEpoch(convertSnowflakeToDate(banneeID));
+    const banTS = toEpoch(bannedAt);
+    const avatar = getMultiUserAvatar(bannee);
 
     const bannerUser = banner.user!;
     const bannerID = bannerUser.id;
+
+    const thumbnail = avatar ? {
+        url: avatar, height: 0, width: 0
+    } : undefined;
+
 
     return {
         content: `<@&${env.MOD_ROLE}>`,
         embeds: [
             {
                 title: "User admitted",
-                description: formatUser(banneeUser),
+                description: formatMultiUser(bannee),
                 color: COLOURS.RED,
                 fields: [
                     {
@@ -51,16 +59,10 @@ export function bannedUser(
                     }
                 ],
                 timestamp: bannedAt.toISOString(),
-                thumbnail: {
-                    // TODO: avatar id can be null?
-                    url: avatarURL(banneeID, banneeUser.avatar!),
-                    height: 0,
-                    width: 0
-                },
+                thumbnail,
                 author: {
                     name: formatUser(bannerUser),
-                    // TODO: avatar id can be null?
-                    icon_url: avatarURL(bannerID, bannerUser.avatar!),
+                    icon_url: avatar,
                 }
             }
         ],
@@ -79,7 +81,7 @@ export function admittedUser(
     role: Role,
     auxRoles: AuxRole[],
 ): RESTPostAPIChannelMessageJSONBody {
-    const admitTS = Number(admittedAt) / 1000;
+    const admitTS = toEpoch(admittedAt);
 
     const admitterUser = admitter.user!;
     const admitterID = admitterUser.id;
@@ -87,6 +89,11 @@ export function admittedUser(
     const admitteeUser = admittee.user!;
     const admitteeID = admitteeUser.id;
 
+    const thumbnail = admitteeUser.avatar ? {
+        url: avatarURL(admitteeID, admitteeUser.avatar),
+        height: 0,
+        width: 0
+    } : undefined;
     return {
         content: `<@&${env.MOD_ROLE}>`,
         embeds: [
@@ -113,16 +120,10 @@ export function admittedUser(
                     },
                 ],
                 timestamp: admittedAt.toISOString(),
-                thumbnail: {
-                    // TODO: avatar id can be null?
-                    url: avatarURL(admitteeID, admitteeUser.avatar!),
-                    height: 0,
-                    width: 0
-                },
+                thumbnail,
                 author: {
                     name: formatUser(admitterUser),
-                    // TODO: avatar id can be null?
-                    icon_url: avatarURL(admitterID, admitterUser.avatar!),
+                    icon_url: admitterUser.avatar ? avatarURL(admitterID, admitterUser.avatar) : undefined,
                 }
             }
         ],
