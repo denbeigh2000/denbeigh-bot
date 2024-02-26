@@ -1,6 +1,9 @@
 import {
     APIGuildMember,
-    APIMessageComponentInteraction, APIMessageStringSelectInteractionData, ComponentType, MessageFlags,
+    APIMessageComponentGuildInteraction,
+    APIMessageComponentInteraction,
+    APIMessageStringSelectInteractionData,
+    ComponentType,
 } from "discord-api-types/payloads/v10";
 
 import { BotClient } from "../../../discord/client";
@@ -54,7 +57,7 @@ async function getBestUser(botClient: BotClient, guildID: Snowflake, userID: Sno
     return { type: "snowflake", data: userID };
 }
 
-async function handleButton(interaction: APIMessageComponentInteraction, env: Env, now: Date, action: String, userID: Snowflake, botClient: BotClient, sentry: Sentry): Promise<boolean> {
+async function handleButton(interaction: APIMessageComponentGuildInteraction, env: Env, now: Date, action: String, userID: Snowflake, botClient: BotClient, sentry: Sentry): Promise<boolean> {
     const stateStore = new StateStore(env.OAUTH_DB, sentry);
 
     switch (action) {
@@ -67,19 +70,14 @@ async function handleButton(interaction: APIMessageComponentInteraction, env: En
             return false;
     }
 
-    // NOTE: i believe this is always the case when this is called from within
-    // a guild?
-    const interactor = interaction.member!;
+    const interactor = interaction.member;
 
     let userRole = idsToRole(env, interactor.roles);
     if (!userRole) {
         await botClient.sendFollowup(
             env.CLIENT_ID,
             interaction.token,
-            {
-                content: "You have no valid roles",
-                flags: MessageFlags.Ephemeral,
-            }
+            genericEphemeral("You have no valid roles"),
         );
         return false;
     }
@@ -143,27 +141,32 @@ async function handleSelect(data: APIMessageStringSelectInteractionData, env: En
 }
 
 export async function handler(
-    interaction: APIMessageComponentInteraction,
+    rawInteraction: APIMessageComponentInteraction,
     env: Env,
     _ctx: ExecutionContext,
     sentry: Sentry
 ) {
+    if (!rawInteraction.guild_id) {
+        // Not able to handle this interaction outside of a guild.
+        sentry.captureMessage("Received authorise interaction outside of a guild", "error");
+        return;
+    }
+
+    const interaction = rawInteraction as APIMessageComponentGuildInteraction;
+
     const now = new Date();
     const data = interaction.data;
     const customId = data.custom_id;
     const fragments = customId.split("_", 3);
     if (fragments.length < 3) {
-        sentry.captureMessage(
-            `Poorly-formed fragments: ${fragments}`,
-            "error"
-        );
+        sentry.captureMessage(`Poorly-formed fragments: ${fragments}`, "error");
         return;
     }
 
     const [_, action, userID] = fragments;
     const botClient = new BotClient(env.BOT_TOKEN, sentry);
 
-    const interactor = (interaction.member?.user || interaction.user)!;
+    const interactor = interaction.member.user;
 
     switch (interaction.data.component_type) {
         case ComponentType.Button:
