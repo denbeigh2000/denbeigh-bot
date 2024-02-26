@@ -82,8 +82,13 @@ export async function handler(
         channel = env.HOLDING_CHANNEL;
         const stateStore = new StateStore(env.OAUTH_DB, sentry);
         const msg = authorisePendingUser(env, guildMember!);
-        const createdMsg = await botClient.createMessage(env.PENDING_CHANNEL, msg);
-        await stateStore.insertActionMessage(user.id, createdMsg.id);
+        // NOTE: don't create a new message (and conflicting DB entry) if the
+        // user already has a pending entry in the server
+        const existingMsg = stateStore.getActionMessage(user.id);
+        if (!existingMsg) {
+            const createdMsg = await botClient.createMessage(env.PENDING_CHANNEL, msg);
+            await stateStore.insertActionMessage(user.id, createdMsg.id);
+        }
     }
 
     return Response.redirect(

@@ -110,16 +110,19 @@ export class StateStore {
     }
 
     public async validateAndEnd(targetUser: Snowflake, interactor: Snowflake): Promise<Results | null> {
-        const { results, success }: D1ResultOne = await this.selectStateQuery(targetUser, interactor).execute();
-        if (!results) {
-            // TODO: sentry
-            // No matches, maybe there was a race?
+        let state: D1ResultOne;
+        try {
+            state = await this.selectStateQuery(targetUser, interactor).execute();
+        } catch (e) {
+            this.sentry.captureException(e);
             return null;
         }
 
-        if (!success) {
-            // TODO: sentry
-            // More info somehow?
+        const { results } = state;
+        if (!results) {
+            // No matches, maybe there was a concurrent request that also ended
+            // this?
+            this.sentry.captureMessage("trying to close an authorisation entry that doesn't exist", "error");
             return null;
         }
 
@@ -139,16 +142,18 @@ export class StateStore {
             },
         });
 
-        const [getResult, deleteResult] = await this.db.batchExecute([getQuery, deleteQuery]) as [D1ResultOne, D1Result];
-        if (!getResult.success) {
-            // TODO: sentry
+        let batchResults: [D1ResultOne, D1Result];
+        try {
+            batchResults = await this.db.batchExecute([getQuery, deleteQuery]) as [D1ResultOne, D1Result];
+        } catch (e) {
+            this.sentry.captureException(e);
             return null;
         }
+        const [getResult, _] = batchResults;
 
         if (!getResult.results) {
-
-            // TODO: sentry
             // No matches, maybe there was a race?
+            this.sentry.captureMessage("our results were deleted concurrently", "error");
             return null;
         }
 
@@ -156,13 +161,6 @@ export class StateStore {
 
         const role = ID_TO_ROLE[roleRaw as string];
         const auxRoles = decodeAuxRoles(auxRolesRaw as string);
-
-        if (!deleteResult.success) {
-            // TODO: sentry
-            // if this fails, but getResult.success was true, i'm not sure what
-            // happened here.
-            return null;
-        }
 
         return { role, auxRoles };
     };
