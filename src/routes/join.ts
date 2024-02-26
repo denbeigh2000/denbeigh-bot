@@ -84,7 +84,7 @@ export async function handler(
         const msg = authorisePendingUser(env, guildMember!);
         // NOTE: don't create a new message (and conflicting DB entry) if the
         // user already has a pending entry in the server
-        const existingMsg = stateStore.getActionMessage(user.id);
+        const existingMsg = await stateStore.getActionMessage(user.id);
         if (!existingMsg) {
             const createdMsg = await botClient.createMessage(env.PENDING_CHANNEL, msg);
             await stateStore.insertActionMessage(user.id, createdMsg.id);

@@ -7,6 +7,7 @@ import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-typ
 
 import { BotClient } from "../../discord/client";
 import { genericEphemeral, genericError } from "../../discord/messages/errors";
+import { changedRole } from "../../discord/messages/log";
 import { Env } from "../../env";
 import { idsToRole, Role, roleToID } from "../../roles";
 import { Sentry } from "../../sentry";
@@ -52,6 +53,8 @@ export async function handler(
     _ctx: ExecutionContext,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
+    const now = new Date();
+
     const { options } = interaction.data;
     if (!options) {
         const msg = "No options defined in promote command";
@@ -59,7 +62,8 @@ export async function handler(
         return genericEphemeral(msg);
     }
 
-    const awarder = interaction.member!.user.id;
+    const awarder = interaction.member;
+    const awarderID = awarder.user.id;
     let role: number | null = null;
     let userId: string | null = null;
     for (const option of options) {
@@ -90,6 +94,13 @@ export async function handler(
         return genericError("You do not have sufficient privileges for this promotion");
     }
 
+    // Assuming user is still in the guild, because surely the call above would
+    // have failed if they had left...
+    const user = (await client.getGuildMember(env.GUILD_ID, userId));
+    if (!user) {
+        return genericError(`<@${userId}> user no longer seems to be in the server?`);
+    }
+
     const roleId = roleToID(env, role)!;
     await client.setManagedRole(
         interaction.guild_id!,
@@ -98,13 +109,8 @@ export async function handler(
         roleId
     );
 
-    // TODO: Replace this with a newer, fancier message that fits our theme
-    await client.createMessage(env.LOG_CHANNEL, {
-        content: `<@${awarder}> awarded <@${userId}> the <@&${roleId}> role`,
-        allowed_mentions: {
-            users: [userId, awarder],
-        },
-    });
+    const msg = changedRole(env, awarder, user, now, role);
+    await client.createMessage(env.LOG_CHANNEL, msg);
 
     return genericEphemeral(`OK, awarded <@${userId}> the <@&${roleId}> role.`);
 }

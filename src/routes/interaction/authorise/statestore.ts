@@ -30,17 +30,23 @@ export class StateStore {
     }
 
     public async getActionMessage(targetUser: Snowflake): Promise<Snowflake | null> {
-        const { results, success }: D1ResultOne = await this.db.fetchOne({
-            tableName: PENDING_TABLE,
-            fields: ["message_id as messageID"],
-            where: {
-                conditions: "target_user_id = ?1",
-                params: [targetUser],
-            }
-        }).execute();
+        let rawResult: D1ResultOne;
+        try {
+            rawResult = await this.db.fetchOne({
+                tableName: PENDING_TABLE,
+                fields: ["message_id as messageID"],
+                where: {
+                    conditions: "target_user_id = ?1",
+                    params: [targetUser],
+                }
+            }).execute();
+        } catch (e) {
+            this.sentry.captureException(e);
+            throw e;
+        }
+        const { results }: D1ResultOne = rawResult;
 
-        if (!success || !results) {
-            // TODO: sentry, proper messaging
+        if (!results) {
             return null;
         }
 
@@ -48,54 +54,65 @@ export class StateStore {
     }
 
     public async insertActionMessage(targetUser: Snowflake, messageID: Snowflake) {
-        const { success }: D1Result = await this.db.insert({
-            tableName: PENDING_TABLE,
-            data: {
-                target_user_id: targetUser,
-                message_id: messageID,
-            },
-        }).execute();
+        let result: D1Result;
+        try {
+            result = await this.db.insert({
+                tableName: PENDING_TABLE,
+                data: {
+                    target_user_id: targetUser,
+                    message_id: messageID,
+                },
+            }).execute();
 
-        if (!success) {
-            // TODO, handling, sentry etc
+        } catch (e) {
             console.error(`Failed to insert data (user: ${targetUser}, msg: ${messageID})`)
-            return
+            this.sentry.captureException(e);
+            throw e;
         }
     }
 
     public async setRole(roleEnum: Role, targetUser: Snowflake, interactor: Snowflake) {
         const role = ROLE_META[roleEnum].id;
 
-        await this.db.insert({
-            tableName: INT_STATE_TABLE,
-            data: {
-                target_user_id: targetUser,
-                interactor_id: interactor,
-                primary_role: role,
-            },
-            onConflict: {
-                column: ["target_user_id", "interactor_id"],
-                data: { primary_role: role },
-            },
-        }).execute();
+        try {
+            await this.db.insert({
+                tableName: INT_STATE_TABLE,
+                data: {
+                    target_user_id: targetUser,
+                    interactor_id: interactor,
+                    primary_role: role,
+                },
+                onConflict: {
+                    column: ["target_user_id", "interactor_id"],
+                    data: { primary_role: role },
+                },
+            }).execute();
+        } catch (e) {
+            this.sentry.captureException(e);
+            throw e;
+        }
     }
 
     public async setAuxRoles(auxRoles: AuxRole[], targetUser: Snowflake, interactor: Snowflake) {
         const roles = encodeAuxRoles(auxRoles);
 
-        // TODO: check success?
-        await this.db.insert({
-            tableName: INT_STATE_TABLE,
-            data: {
-                target_user_id: targetUser,
-                interactor_id: interactor,
-                aux_roles: roles,
-            },
-            onConflict: {
-                column: ["target_user_id", "interactor_id"],
-                data: { aux_roles: roles },
-            },
-        }).execute();
+        try {
+            await this.db.insert({
+                tableName: INT_STATE_TABLE,
+                data: {
+                    target_user_id: targetUser,
+                    interactor_id: interactor,
+                    aux_roles: roles,
+                },
+                onConflict: {
+                    column: ["target_user_id", "interactor_id"],
+                    data: { aux_roles: roles },
+                },
+            }).execute();
+        } catch (e) {
+            this.sentry.captureException(e);
+            throw e;
+        }
     }
 
     private selectStateQuery(targetUser: Snowflake, interactor: Snowflake): Query {

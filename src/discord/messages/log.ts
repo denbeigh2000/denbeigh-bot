@@ -133,3 +133,57 @@ export function admittedUser(
         },
     };
 }
+
+export function changedRole(
+    env: Env,
+    actor: APIGuildMember,
+    target: APIGuildMember,
+    changedAt: Date,
+    newRole: Role,
+): RESTPostAPIChannelMessageJSONBody {
+    const changeTS = toEpoch(changedAt);
+
+    const actorID = actor.user!.id;
+    const actorUser = actor.user!;
+    const targetUser = target.user!;
+
+    const thumbnail = targetUser.avatar ? {
+        url: avatarURL(targetUser.id, targetUser.avatar),
+        height: 0,
+        width: 0
+    } : undefined;
+    return {
+        content: `<@&${env.MOD_ROLE}>`,
+        embeds: [
+            {
+                title: "User admitted",
+                description: formatUser(targetUser),
+                color: COLOURS.GREEN,
+                fields: [
+                    {
+                        name: "Changed by",
+                        value: `<@${actorID}>`
+                    },
+                    {
+                        name: "New Role",
+                        value: renderRole(ROLE_META[newRole]),
+                    },
+                    {
+                        name: "Changed at",
+                        value: `<t:${changeTS}:R>`,
+                    },
+                ],
+                timestamp: changedAt.toISOString(),
+                thumbnail,
+                author: {
+                    name: formatUser(targetUser),
+                    icon_url: actorUser.avatar ? avatarURL(actorID, actorUser!.avatar) : undefined,
+                }
+            }
+        ],
+        allowed_mentions: {
+            roles: [env.MOD_ROLE],
+            users: [targetUser.id, actorID],
+        },
+    };
+}
