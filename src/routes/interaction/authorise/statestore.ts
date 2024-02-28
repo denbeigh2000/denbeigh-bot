@@ -1,5 +1,5 @@
 import { Snowflake } from "discord-api-types/globals"
-import { D1QB, D1Result, D1ResultOne, Query } from "workers-qb"
+import { D1QB, D1Result, D1ResultOne, JoinTypes, Query } from "workers-qb"
 
 import { AuxRole, AUX_ROLE_META, ID_TO_AUX_ROLE, ID_TO_ROLE, Role, ROLE_META } from "../../../roles";
 import { Sentry } from "../../../sentry";
@@ -17,6 +17,10 @@ function encodeAuxRoles(auxRoles: AuxRole[]): string {
 }
 
 function decodeAuxRoles(data: string): AuxRole[] {
+    if (!data) {
+        return [];
+    }
+
     return data.split("\0").map(r => ID_TO_AUX_ROLE[r]);
 }
 
@@ -117,10 +121,15 @@ export class StateStore {
 
     private selectStateQuery(targetUser: Snowflake, interactor: Snowflake): Query {
         return this.db.fetchOne({
-            tableName: INT_STATE_TABLE,
-            fields: ["primary_role as roleRaw", "aux_roles as auxRolesRaw"],
+            tableName: PENDING_TABLE,
+            fields: [`${INT_STATE_TABLE}.primary_role as roleRaw`, `${INT_STATE_TABLE}.aux_roles as auxRolesRaw`],
+            join: {
+                type: JoinTypes.LEFT,
+                table: INT_STATE_TABLE,
+                on: `${INT_STATE_TABLE}.target_user_id = ${PENDING_TABLE}.target_user_id`,
+            },
             where: {
-                conditions: 'target_user_id = ?1 AND interactor_id = ?2',
+                conditions: `${INT_STATE_TABLE}.target_user_id = ?1 AND interactor_id = ?2`,
                 params: [targetUser, interactor],
             },
         });
@@ -159,7 +168,7 @@ export class StateStore {
 
         // NOTE: we can't actually do a "transaction" here, but I hope for my
         // low-volume use cases that changes are unlikely in this section :^)
-        if (!results.roleRaw || !results.auxRolesRaw) {
+        if (!results.roleRaw) {
             // TODO: need to communicate that there were properties missing
             return null;
         }
