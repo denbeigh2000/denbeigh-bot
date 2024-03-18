@@ -12,6 +12,19 @@ class VersionBumpError(RuntimeError):
     pass
 
 
+class BadBranchError(VersionBumpError):
+    def __init__(self, mode: str) -> None:
+        super().__init__(f"need to be on main branch for a {mode} bump")
+
+
+class NotReleaseBranchError(VersionBumpError):
+    def __init__(self, exp: str, actual: str) -> None:
+        super().__init__(
+            "need to be on correct release branch for patch bump "
+            f"(expected {exp}, on {actual})"
+        )
+
+
 class ReleaseManager:
     def __init__(self, git: Git) -> None:
         self._git = git
@@ -25,14 +38,15 @@ class ReleaseManager:
         branch_ = branch or self._git.branch()
         return branch_.startswith(RELEASE_PREFIX)
 
-    def is_release_branch_for_version(
+    def assert_is_release_branch_for_version(
         self,
         version: Version,
         branch: Optional[str] = None,
-    ) -> bool:
-        exp = f'{RELEASE_PREFIX}/{version.version_string("minor")}'
+    ) -> None:
+        exp = f'{RELEASE_PREFIX}{version.version_string("minor")}'
         branch_ = branch or self._git.branch()
-        return branch_ == exp
+        if branch_ != exp:
+            raise NotReleaseBranchError(exp, branch_)
 
     def version_bump(self, mode: Mode) -> Version:
         assert mode in ("major", "minor", "patch")
@@ -45,19 +59,14 @@ class ReleaseManager:
 
         if mode in ("major", "minor"):
             if branch != "master":
-                raise VersionBumpError(
-                    f"need to be on main branch for a {mode} bump"
-                )
+                raise BadBranchError(mode)
 
             # release/x.y
             min_version = version.version_string("minor")
             release_branch = f"{RELEASE_PREFIX}{min_version}"
             self._git.checkout(release_branch, new=True)
         elif mode == "patch":
-            if not self.is_release_branch_for_version(version, branch):
-                raise VersionBumpError(
-                    "need to be on correct release branch for patch bump"
-                )
+            self.assert_is_release_branch_for_version(version, branch)
 
         # vx.y.z
         version_str = version.version_string()
