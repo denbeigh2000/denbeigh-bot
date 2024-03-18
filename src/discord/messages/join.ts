@@ -81,13 +81,17 @@ export function authorisePendingUser(env: Env, guildMember: APIGuildMember): RES
 
     const fields = [
         {
+            name: "Profile",
+            value: `<@${user.id}>`,
+        },
+        {
             name: "Account created",
-            value: `<t:${creationTS}:R>`
+            value: `<t:${creationTS}:R>`,
         },
         {
             name: "Joined server",
-            value: `<t:${joinTS}:R>`
-        }
+            value: `<t:${joinTS}:R>`,
+        },
     ];
 
     if (user.global_name) {
