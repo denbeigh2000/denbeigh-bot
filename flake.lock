@@ -22,6 +22,31 @@
         "type": "github"
       }
     },
+    "denbeigh-ci": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "naersk": "naersk",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "rust-overlay": "rust-overlay_2"
+      },
+      "locked": {
+        "lastModified": 1711908364,
+        "narHash": "sha256-q9PxtuL+1s8nUSQzXOa3OiSSq4EcKAXXsygXfCP96hI=",
+        "owner": "denbeigh2000",
+        "repo": "ci",
+        "rev": "0d6933a56c23cc227e5c91e810b275213768839a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "denbeigh2000",
+        "repo": "ci",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -58,6 +83,27 @@
         "type": "github"
       }
     },
+    "naersk": {
+      "inputs": {
+        "nixpkgs": [
+          "denbeigh-ci",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1698420672,
+        "narHash": "sha256-/TdeHMPRjjdJub7p7+w55vyABrsJlt5QkznPYy55vKA=",
+        "owner": "nix-community",
+        "repo": "naersk",
+        "rev": "aeb58d5e8faead8980a807c840232697982d47b9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "naersk",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1705697961,
@@ -77,6 +123,7 @@
     "root": {
       "inputs": {
         "denbeigh": "denbeigh",
+        "denbeigh-ci": "denbeigh-ci",
         "flake-utils": "flake-utils_2",
         "nixpkgs": "nixpkgs"
       }
@@ -98,6 +145,31 @@
         "owner": "oxalica",
         "repo": "rust-overlay",
         "rev": "612b6a974cb921fe7aa4cafd54f4f5f899b19173",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "rust-overlay_2": {
+      "inputs": {
+        "flake-utils": [
+          "denbeigh-ci",
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "denbeigh-ci",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1711159876,
+        "narHash": "sha256-FqulGFAxIdc1Sku4Hm0c47wxri5OE/z5FTsUI9epeJA=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "6529a7975b893c17318cbdd351c771cb8d2c1dcb",
         "type": "github"
       },
       "original": {

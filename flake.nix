@@ -17,9 +17,17 @@
       url = "github:denbeigh2000/nix-dev";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    denbeigh-ci = {
+      url = "github:denbeigh2000/ci";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-utils.follows = "flake-utils";
+      };
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, denbeigh }:
+  outputs = { self, nixpkgs, flake-utils, denbeigh, denbeigh-ci }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -37,6 +45,8 @@
           program = "${releaseTool}";
         };
 
+        ci = denbeigh-ci.lib.mkCIConfig { inherit self pkgs; };
+
         devShells = {
           default = shell;
           dev = shell;
@@ -44,6 +54,7 @@
 
         packages = {
           inherit (pkg) workerBundle releaseTool;
+          ci-tool = denbeigh-ci.packages.${system}.tool;
         };
       }
     );
