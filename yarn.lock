@@ -374,6 +374,15 @@
   resolved "https://registry.yarnpkg.com/@sideway/pinpoint/-/pinpoint-2.0.0.tgz#cff8ffadc372ad29fd3f78277aeb29e632cc70df"
   integrity sha512-RNiOoTPkptFtSVzQevY/yWtZwf/RxyVnPy/OcA9HBM3MlGDnBEYL5B41H0MTn0Uec8Hi+2qUtTfG2WWZBmMejQ==
 
+"@tsndr/cloudflare-worker-jwt@http://github.com/denbeigh2000/cloudflare-worker-jwt#denbeigh/fix-types":
+  version "2.5.3"
+  resolved "http://github.com/denbeigh2000/cloudflare-worker-jwt#d278abb59c330b7e8e6f314c1aa90d3b3577a096"
+
+"@tsndr/cloudflare-worker-jwt@https://github.com/denbeigh2000/cloudflare-worker-jwt#denbeigh/fix-types":
+  version "2.5.3"
+  uid d278abb59c330b7e8e6f314c1aa90d3b3577a096
+  resolved "https://github.com/denbeigh2000/cloudflare-worker-jwt#d278abb59c330b7e8e6f314c1aa90d3b3577a096"
+
 "@types/cookie@^0.5.1":
   version "0.5.3"
   resolved "https://registry.yarnpkg.com/@types/cookie/-/cookie-0.5.3.tgz#3f98076ede5e467783507284d3c19215327fff8f"

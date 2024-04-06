@@ -205,12 +205,32 @@ export class OAuthClient {
         return token;
     }
 
+    private async revokeToken(token: string) {
+        const request = new Request(API_BASE_URL + Routes.oauth2TokenRevocation(), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams([
+                ["token", token],
+                ["token_type_hint", "access_token"],
+            ]),
+        });
+
+        const response = await fetch(request);
+        const text = await response.text();
+        if (response.status >= 400) {
+            console.log(`Error: status ${response.status}, ${text}`);
+        }
+    }
+
     private async upsertToken(text: string): Promise<AccessTokenResponse | null> {
         const tokenInfo = await this.parseRefreshRseponseAndFetchUserId(text);
         const expiresAtDate = new Date(tokenInfo.expiresAt);
 
         // NOTE: we may now need to set our user in sentry now
-        await this.tokenStore.upsert(
+        const oldToken = await this.tokenStore.upsert(
+            user
             tokenInfo.accessToken,
             { expiresAt: expiresAtDate, refreshToken: tokenInfo.refreshToken, user: tokenInfo.user },
         );
