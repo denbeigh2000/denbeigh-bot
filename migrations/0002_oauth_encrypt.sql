@@ -8,6 +8,8 @@ CREATE TABLE oauth (
     encrypted_refresh_token BLOB    NOT NULL,
     iv                      BLOB    NOT NULL,
     expires_at              INTEGER NOT NULL,
+    old_encrypted_token     BLOB    DEFAULT NULL,
+    old_iv                  BLOB    DEFAULT NULL
 );
 
 CREATE INDEX idx_oauth_expires_at ON oauth (expires_at);

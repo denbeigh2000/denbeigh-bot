@@ -3,7 +3,6 @@ import * as jwt from "@tsndr/cloudflare-worker-jwt";
 
 export interface Session {
     discordID: Snowflake,
-    expiry: Date,
 }
 
 // https://github.com/Microsoft/TypeScript-wiki/blob/main/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
@@ -25,6 +24,7 @@ export class SessionManager {
     }
 
     public async sign(session: Session): Promise<string> {
+        // @ts-ignore: https://github.com/tsndr/cloudflare-worker-jwt/pull/78
         return jwt.sign(session, this.key, { keyid: "init", ...this.ALGORITHM });
     }
 
@@ -34,7 +34,7 @@ export class SessionManager {
             throw new VerificationError();
         }
 
-        const decoded = await jwt.decode();
+        const decoded = jwt.decode(token);
         return decoded.payload as Session;
     }
 }

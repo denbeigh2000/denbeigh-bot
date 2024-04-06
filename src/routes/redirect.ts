@@ -1,10 +1,9 @@
 import { OAuthClient } from "../discord/oauth";
-import { Env } from "../env";
+import { Env, importOauthKey } from "../env";
 import { Sentry } from "../sentry";
 import { respond400 } from "../util/http";
 
-export async function handler(
-    req: Request,
+export async function handler(req: Request,
     env: Env,
     _ctx: ExecutionContext,
     sentry: Sentry
@@ -22,14 +21,16 @@ export async function handler(
         return respond400();
     }
 
-    const oauthClient = new OAuthClient(
-        env.CLIENT_ID,
-        env.CLIENT_SECRET,
-        env.REDIRECT_URI,
-        env.OAUTH_DB,
-        env.OAUTH,
+    const tokenKey = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const oauthClient = new OAuthClient({
+        clientId: env.CLIENT_ID,
+        clientSecret: env.CLIENT_SECRET,
+        redirectUri: env.REDIRECT_URI,
+        tokenKey,
+        tokenDB: env.OAUTH_DB,
+        stateKV: env.OAUTH,
         sentry
-    );
+    });
     const ok = await oauthClient.checkState(state);
     if (!ok) {
         return respond400();

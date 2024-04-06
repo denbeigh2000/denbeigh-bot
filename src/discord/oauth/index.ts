@@ -7,6 +7,8 @@ import { UserClient } from "../client";
 import { Sentry } from "../../sentry";
 import { TokenStore } from "./tokenstore";
 import { StateStore } from "./statestore";
+import { SessionManager } from "./session";
+import { importOauthKey } from "../../env";
 
 const API_BASE_URL = "https://discordapp.com/api"
 
@@ -46,49 +48,21 @@ export class OAuthClient {
     stateStore: StateStore;
     sentry: Sentry;
 
-    constructor(
+    constructor(params: {
         clientId: string,
         clientSecret: string,
         redirectUri: string,
+        tokenKey: CryptoKey,
         tokenDB: D1Database,
         stateKV: KVNamespace,
         sentry: Sentry
-    ) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.redirectUri = redirectUri;
-        this.tokenStore = new TokenStore(tokenDB, sentry);
-        this.stateStore = new StateStore(stateKV);
-        this.sentry = sentry;
-    }
-
-    public async getRefreshOrAuthorise(
-        req: Request
-    ): Promise<Response | string> {
-        const givenToken = getAuthToken(req);
-        if (!givenToken) {
-            return this.authorise();
-        }
-
-        const token = await this.checkToken(givenToken);
-        if (!token) {
-            return this.authorise();
-        }
-
-        const path = new URL(req.url).pathname;
-
-        if (token !== givenToken) {
-            // We refreshed our token, load again with new token
-            return new Response("", {
-                status: 302,
-                headers: {
-                    Location: path,
-                    "Set-Cookie": `auth=${token}`,
-                },
-            });
-        }
-
-        return token;
+    }) {
+        this.clientId = params.clientId;
+        this.clientSecret = params.clientSecret;
+        this.redirectUri = params.redirectUri;
+        this.tokenStore = new TokenStore(params.tokenKey, params.tokenDB, params.sentry);
+        this.stateStore = new StateStore(params.stateKV);
+        this.sentry = params.sentry;
     }
 
     public async checkState(
@@ -141,8 +115,8 @@ export class OAuthClient {
         return token;
     }
 
-    public async checkToken(token: string): Promise<string | null> {
-        const record = await this.tokenStore.get(token);
+    public async retrieveToken(userID: string): Promise<string | null> {
+        const record = await this.tokenStore.get(userID);
         if (!record) {
             return null;
         }
@@ -153,11 +127,11 @@ export class OAuthClient {
             // this.sentry.setUser(user);
 
             // Token is fine, return it.
-            return token;
+            return record.token;
         }
 
         // Refresh token, save to store
-        const newToken = await this.refreshToken(token, refreshToken);
+        const newToken = await this.refreshToken(refreshToken);
         if (!newToken) {
             return null;
         }
@@ -167,7 +141,6 @@ export class OAuthClient {
     }
 
     private async refreshToken(
-        oldAccessToken: string,
         refreshToken: string
     ): Promise<AccessTokenResponse | null> {
         const request = new Request(API_BASE_URL + Routes.oauth2TokenExchange(), {
@@ -178,6 +151,8 @@ export class OAuthClient {
             // NOTE: TS won't let us cast the typed object of this body back to
             // a Record<string, string>
             body: new URLSearchParams({
+                // TODO: I don't think this is the right place to provide
+                // id/secret?
                 client_id: this.clientId,
                 client_secret: this.clientSecret,
                 grant_type: "refresh_token",
@@ -192,15 +167,19 @@ export class OAuthClient {
             return null;
         }
 
-        const token = await this.parseRefreshRseponseAndFetchUserId(text);
-        // TODO: Store something more useful than the user ID?
-        await this.tokenStore.replace(oldAccessToken, token.accessToken, {
-            expiresAt: new Date(token.expiresAt),
+        const token = await this.parseRefreshResponseAndFetchUserId(text);
+        const oldToken = await this.tokenStore.replace(token.user, {
+            token: token.accessToken,
             refreshToken: token.refreshToken,
-            user: token.user,
+            expiresAt: new Date(token.expiresAt),
         });
 
         this.sentry.breadcrumbFromHTTP("refreshing oauth token", request.url, response);
+
+        if (oldToken) {
+            // TODO: exception catching?
+            await this.revokeToken(oldToken);
+        }
 
         return token;
     }
@@ -225,21 +204,28 @@ export class OAuthClient {
     }
 
     private async upsertToken(text: string): Promise<AccessTokenResponse | null> {
-        const tokenInfo = await this.parseRefreshRseponseAndFetchUserId(text);
-        const expiresAtDate = new Date(tokenInfo.expiresAt);
+        const tokenInfo = await this.parseRefreshResponseAndFetchUserId(text);
 
         // NOTE: we may now need to set our user in sentry now
         const oldToken = await this.tokenStore.upsert(
-            user
-            tokenInfo.accessToken,
-            { expiresAt: expiresAtDate, refreshToken: tokenInfo.refreshToken, user: tokenInfo.user },
+            tokenInfo.user,
+            {
+                token: tokenInfo.accessToken,
+                refreshToken: tokenInfo.refreshToken,
+                expiresAt: new Date(tokenInfo.expiresAt),
+            },
         );
+
+        if (oldToken) {
+            // TODO: catch?
+            await this.revokeToken(oldToken);
+        }
 
         return tokenInfo;
     }
 
     // TODO: Remove the user fetch from this or do something with the info
-    private async parseRefreshRseponseAndFetchUserId(responseText: string): Promise<AccessTokenResponse> {
+    private async parseRefreshResponseAndFetchUserId(responseText: string): Promise<AccessTokenResponse> {
         const data = JSON.parse(responseText);
         const expiresIn = data["expires_in"];
         const expiresAt = Date.now() + expiresIn * 1000;

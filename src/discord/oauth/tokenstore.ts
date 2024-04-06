@@ -24,6 +24,11 @@ interface StorageData {
     expires_at: number,
 }
 
+interface UpdatedTokenData {
+    old_iv: ArrayBuffer,
+    old_encrypted_token: ArrayBuffer,
+}
+
 export interface DiscordAuthInfo {
     token: string,
     refreshToken: string,
@@ -39,14 +44,6 @@ export class TokenStore {
         this.key = key;
         this.qb = new D1QB(db);
         this.sentry = sentry;
-    }
-
-    private async encode(accessToken: string): Promise<string> {
-        // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#converting_a_digest_to_a_hex_string
-        const tokenBuffer = new TextEncoder().encode(accessToken);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", tokenBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
     }
 
     private iv(): Uint8Array {
@@ -99,6 +96,14 @@ export class TokenStore {
         };
     }
 
+    private async decryptOldPartial(data: UpdatedTokenData): Promise<string> {
+        // TODO: need to catch exceptions(??)
+        console.debug(data);
+        const token = data.old_encrypted_token;
+        const iv = new Uint8Array(data.old_iv);
+        return await this.decrypt(token, iv);
+    }
+
     public async get(userId: string): Promise<DiscordAuthInfo | null> {
         const fetched: D1ResultOne = await this.qb.fetchOne({
             tableName: TABLE_NAME,
@@ -114,7 +119,6 @@ export class TokenStore {
             return null;
         }
 
-        // const { token, refreshToken, expiresAt, iv } = results;
         // @ts-ignore: iv should be an ArrayBuffer, if D1's docs are correct
         const iv = results.iv as ArrayBuffer;
         // @ts-ignore: iv should be an ArrayBuffer, if D1's docs are correct
@@ -132,12 +136,10 @@ export class TokenStore {
         });
     }
 
-    public async upsert(userID: Snowflake, info: DiscordAuthInfo): Promise<ArrayBuffer | null> {
-        // TODO: this needs to change to encrypt instead
-        //const hashedToken = await this.encode(accessToken);
+    public async upsert(userID: Snowflake, info: DiscordAuthInfo): Promise<string | null> {
         const data = await this.encryptInfo(info);
 
-        const result = await this.qb.insert({
+        const updated = await this.qb.insert({
             tableName: TABLE_NAME,
             data: {
                 user: userID,
@@ -145,7 +147,7 @@ export class TokenStore {
                 // which does accept ArrayBuffers as parameters.
                 encrypted_token: data.encrypted_token,
                 // @ts-ignore: see above
-                encrypted_refresh_token: encryptedRefreshToken,
+                encrypted_refresh_token: data.encrypted_refresh_token,
                 // @ts-ignore: see above
                 iv: data.iv,
                 expires_at: data.expires_at,
@@ -157,24 +159,31 @@ export class TokenStore {
                     encrypted_token: new Raw("excluded.encrypted_token"),
                     iv: new Raw("excluded.iv"),
                     expires_at: new Raw("excluded.expires_at"),
+                    // Write the overwritten values to a new column, otherwise
+                    // we can't use them in our RETURNING clause
                     old_encrypted_token: new Raw("encrypted_token"),
+                    old_iv: new Raw("iv"),
                 },
             },
-            returning: "encrypted_token",
+            returning: ["old_encrypted_token", "old_iv"]
         }).execute();
 
-        if (result.results && result.results[0]) {
-            // TODO: need to confirm this type
-            console.debug(result.results);
-            return result.results[0] as ArrayBuffer;
+        if (!updated.success) {
+            this.sentry.captureMessage("failed to upsert access token", "error");
+            throw new Error("not able to insert new access token");
+        }
+
+        // TODO: need to confirm this type (dict? list?)
+        if (updated.results && updated.results["old_encrypted_token"]) {
+            // TODO: need to catch exceptions(??)
+            console.debug(updated.results);
+            return await this.decryptOldPartial(updated.results);
         }
 
         return null;
     }
 
-    public async replace(userId: Snowflake, info: DiscordAuthInfo) {
-        // const oldHashedToken = await this.encode(oldToken);
-        // const hashedToken = await this.encode(newToken);
+    public async replace(userId: Snowflake, info: DiscordAuthInfo): Promise<string | null> {
         const data = await this.encryptInfo(info);
 
         const updated: D1Result = await this.qb.update({
@@ -193,20 +202,21 @@ export class TokenStore {
                 conditions: "user_id = ?1",
                 params: [userId],
             },
-            returning: "encrypted_token",
+            returning: ["old_encrypted_token", "old_iv"],
         }).execute();
 
         if (!updated.success) {
             this.sentry.captureMessage("failed to update stored token", "error");
+            throw new Error("not able to replace access token");
         }
 
-        if (updated.results) {
-
+        // TODO: need to confirm this type (dict? list?)
+        if (updated.results && updated.results["old_encrypted_token"]) {
+            // TODO: need to catch exceptions(??)
+            console.debug(updated.results);
+            return await this.decryptOldPartial(updated.results as any);
         }
 
-        if (!deleted.success) {
-            this.sentry.captureMessage("failed to delete old token hash", "info");
-        }
+        return null;
     }
 }
-
