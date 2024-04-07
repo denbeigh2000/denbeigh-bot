@@ -168,7 +168,6 @@ export class OAuthClient {
         this.sentry.breadcrumbFromHTTP("refreshing oauth token", request.url, response);
 
         if (oldToken && oldToken !== token.accessToken) {
-            // TODO: exception catching?
             await this.revokeToken(oldToken);
         }
 
@@ -210,7 +209,6 @@ export class OAuthClient {
         );
 
         if (oldToken) {
-            // TODO: catch?
             await this.revokeToken(oldToken);
         }
 

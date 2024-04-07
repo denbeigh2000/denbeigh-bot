@@ -39,6 +39,8 @@ export class TokenStore {
     key: CryptoKey;
     qb: D1QB;
     sentry: Sentry;
+    decoder: TextDecoder = new TextDecoder();
+    encoder: TextEncoder = new TextEncoder();
 
     constructor(key: CryptoKey, db: D1Database, sentry: Sentry) {
         this.key = key;
@@ -52,12 +54,11 @@ export class TokenStore {
 
     private async decrypt(data: Uint8Array, iv: Uint8Array): Promise<string> {
         const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, this.key, data);
-        const s = new TextDecoder().decode(decrypted);
-        return s;
+        return this.decoder.decode(decrypted);
     }
 
     private async encrypt(iv: Uint8Array, secret: string): Promise<ArrayBuffer> {
-        const encoded = new TextEncoder().encode(secret);
+        const encoded = this.encoder.encode(secret);
         return await crypto.subtle.encrypt(
             { name: "AES-GCM", iv },
             this.key,

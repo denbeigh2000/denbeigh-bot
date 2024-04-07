@@ -36,8 +36,6 @@ export async function handler(
 
     const givenToken = getAuthToken(req);
     if (!givenToken) {
-        // TODO: return redirect to auth
-        // throw new Error("no auth token?")
         return oauthClient.authorise();
     }
 
