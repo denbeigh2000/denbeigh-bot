@@ -8,7 +8,7 @@ import { Env, importJwtKey, importOauthKey } from "../env";
 import { roleToID } from "../roles";
 import { Sentry } from "../sentry";
 import { formatUser } from "../util";
-import { returnStatus } from "../util/http";
+import { DEFAULT_HEADERS, returnStatus } from "../util/http";
 import { StateStore } from "./interaction/authorise/statestore";
 
 export async function handler(
@@ -106,6 +106,6 @@ export async function handler(
     }
 
     return Response.redirect(
-        `https://discord.com/channels/${env.GUILD_ID}/${channel}`
+        `https://discord.com/channels/${env.GUILD_ID}/${channel}`,
     );
 }

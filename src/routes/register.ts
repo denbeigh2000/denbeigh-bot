@@ -2,7 +2,7 @@ import { Env, importOauthKey } from "../env";
 import { BotClient } from "../discord/client";
 import { getAuthToken } from "../discord/oauth";
 import { Sentry } from "../sentry";
-import { returnStatus } from "../util/http";
+import { DEFAULT_HEADERS, returnStatus } from "../util/http";
 
 import { command as InviteCommand } from "./interaction/invite";
 import { command as GroupCommand } from "./interaction/group";
@@ -48,5 +48,5 @@ export async function handler(
         ALL_COMMANDS
     );
 
-    return new Response("OK\n");
+    return new Response("OK\n", { headers: DEFAULT_HEADERS });
 }

@@ -13,14 +13,6 @@ export const AUTH_COOKIE_NAME = "session";
 
 const SCOPES = [OAuth2Scopes.Identify, OAuth2Scopes.GuildsJoin, OAuth2Scopes.RoleConnectionsWrite];
 
-export async function tokenStorageKey(accessToken: string): Promise<string> {
-    // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#converting_a_digest_to_a_hex_string
-    const tokenBuffer = new TextEncoder().encode(accessToken);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", tokenBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 export function getAuthToken(req: Request): string | null {
     const cookieStr = req.headers.get("Cookie");
     if (!cookieStr) {

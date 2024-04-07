@@ -9,7 +9,7 @@ import { BotClient } from "../../discord/client";
 import verify from "../../discord/verify";
 import { Env } from "../../env";
 import { Sentry } from "../../sentry";
-import { returnJSON, returnStatus } from "../../util/http";
+import { DEFAULT_HEADERS, returnJSON, returnStatus } from "../../util/http";
 
 import { handler as handleAuthorise } from "./authorise";
 import { handler as handleGroup } from "./group";
@@ -32,6 +32,7 @@ export async function handler(
             "my mother taught me never to talk to strangers",
             {
                 status: 401,
+                headers: DEFAULT_HEADERS,
             }
         );
     }

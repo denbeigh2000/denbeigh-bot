@@ -3,7 +3,7 @@ import { AUTH_COOKIE_NAME, OAuthClient } from "../discord/oauth";
 import { SessionManager } from "../discord/oauth/session";
 import { Env, importJwtKey, importOauthKey } from "../env";
 import { Sentry } from "../sentry";
-import { respond400 } from "../util/http";
+import { DEFAULT_HEADERS, respond400 } from "../util/http";
 
 export async function handler(req: Request,
     env: Env,
@@ -50,12 +50,13 @@ export async function handler(req: Request,
 
     return new Response("", {
         status: 302,
-        headers: new Headers({
+        headers: new Headers([
             // TODO: it'd be nice if we didn't hardcode this, and just
             // redirected to wherever the user wanted to go
-            Location: "/join",
-            "Set-Cookie": serializeCookie(AUTH_COOKIE_NAME, jwt, { secure: true }),
-        }),
+            ["Location", "/join"],
+            ["Set-Cookie", serializeCookie(AUTH_COOKIE_NAME, jwt, { secure: true })],
+            ...DEFAULT_HEADERS
+        ]),
     });
 }
 
