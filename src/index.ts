@@ -1,3 +1,5 @@
+import { serialize as serializeCookie } from "cookie";
+
 import { Env } from "./env";
 import { router } from "./routes";
 import { Sentry } from "./sentry";

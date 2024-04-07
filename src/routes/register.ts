@@ -1,8 +1,8 @@
-import { Env } from "../env";
-import { BotClient, UserClient } from "../discord/client";
-import { OAuthClient } from "../discord/oauth";
+import { Env, importOauthKey } from "../env";
+import { BotClient } from "../discord/client";
+import { getAuthToken } from "../discord/oauth";
 import { Sentry } from "../sentry";
-import { returnStatus } from "../util/http";
+import { DEFAULT_HEADERS, returnStatus } from "../util/http";
 
 import { command as InviteCommand } from "./interaction/invite";
 import { command as GroupCommand } from "./interaction/group";
@@ -10,6 +10,7 @@ import { command as PromoteCommand } from "./interaction/promote";
 import { command as NoWorkCommand } from "./interaction/nowork";
 import { command as PingCommand } from "./interaction/ping";
 import { command as HelpCommand } from "./interaction/help";
+import { SessionManager } from "../discord/oauth/session";
 
 const ALL_COMMANDS = [
     InviteCommand,
@@ -26,26 +27,17 @@ export async function handler(
     _ctx: ExecutionContext,
     sentry: Sentry
 ) {
-    const oauthClient = new OAuthClient(
-        env.CLIENT_ID,
-        env.CLIENT_SECRET,
-        env.REDIRECT_URI,
-        env.OAUTH_DB,
-        env.OAUTH,
-        sentry
-    );
-    const token = await oauthClient.getRefreshOrAuthorise(req);
-    if (token instanceof Response) {
-        return token;
+    const tokenKey = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
+    const sessionManager = new SessionManager(tokenKey);
+    const givenJWT = getAuthToken(req);
+    if (!givenJWT) {
+        // TODO: this.authorise()?
+        throw new Error("no auth?");
     }
 
-    const userClient = new UserClient(token, sentry);
-    const user = await userClient.getUserInfo();
-    if (!user) {
-        return oauthClient.authorise();
-    }
-
-    if (user.id !== env.DENBEIGH_USER) {
+    const { discordID } = await sessionManager.decode(givenJWT);
+    // TODO: should we re-check this token here?
+    if (discordID !== env.DENBEIGH_USER) {
         return returnStatus(403, "locals only\n");
     }
 
@@ -56,5 +48,5 @@ export async function handler(
         ALL_COMMANDS
     );
 
-    return new Response("OK\n");
+    return new Response("OK\n", { headers: DEFAULT_HEADERS });
 }
