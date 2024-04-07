@@ -1,6 +1,6 @@
 import { Env, importOauthKey } from "../env";
+import { getAuthToken } from "../auth";
 import { BotClient } from "../discord/client";
-import { getAuthToken } from "../discord/oauth";
 import { Sentry } from "../sentry";
 import { DEFAULT_HEADERS, returnStatus } from "../util/http";
 

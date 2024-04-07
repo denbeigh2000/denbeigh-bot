@@ -1,14 +1,14 @@
 import { RESTJSONErrorCodes } from "discord-api-types/v10";
+import { getAuthToken } from "../auth";
+import { TokenResponse } from "../auth/authManager";
 
-import { BotClient, UserClient } from "../discord/client";
+import { BotClient } from "../discord/client";
 import { authorisePendingUser } from "../discord/messages/join";
-import { getAuthToken, OAuthClient } from "../discord/oauth";
-import { SessionManager } from "../discord/oauth/session";
-import { Env, importJwtKey, importOauthKey } from "../env";
+import { Env } from "../env";
 import { roleToID } from "../roles";
 import { Sentry } from "../sentry";
-import { formatUser } from "../util";
-import { DEFAULT_HEADERS, returnStatus } from "../util/http";
+import { authManagerFromEnv, formatUser } from "../util";
+import { returnStatus } from "../util/http";
 import { StateStore } from "./interaction/authorise/statestore";
 
 export async function handler(
@@ -18,42 +18,30 @@ export async function handler(
     sentry: Sentry
 ): Promise<Response> {
 
-    const [tokenKey, jwtKey] = await Promise.all([
-        importOauthKey(env.OAUTH_ENCRYPTION_KEY),
-        importJwtKey(env.JWT_SIGNING_KEY),
-    ]);
-
-    const sessionManager = new SessionManager(jwtKey);
-    const oauthClient = new OAuthClient({
-        clientId: env.CLIENT_ID,
-        clientSecret: env.CLIENT_SECRET,
-        redirectUri: env.REDIRECT_URI,
-        tokenKey,
-        tokenDB: env.OAUTH_DB,
-        stateKV: env.OAUTH,
-        sentry,
-    });
-
+    const authManager = await authManagerFromEnv(env, sentry);
     const givenToken = getAuthToken(req);
     if (!givenToken) {
-        return oauthClient.authorise();
+        return Response.redirect(await authManager.initAuthorisation());
     }
 
-    const info = await sessionManager.decode(givenToken);
-    const token = await oauthClient.retrieveToken(info.discordID);
-    if (!token) {
-        return oauthClient.authorise();
-    }
+    let data: TokenResponse;
+    try {
+        data = await authManager.getFromToken(givenToken);
+    } catch (e) {
+        sentry.captureMessage("failed to validate session", "warning", {
+            originalException: e,
+        });
 
-    const userClient = new UserClient(token, sentry);
-    const user = await userClient.getUserInfo();
-    if (!user) {
-        // Just in case our token expires between those two calls...somehow
-        return oauthClient.authorise();
+        // TODO: better verification, we're assuming this is a valid AuthManagerErrorCode
+        if (e.code) {
+            return Response.redirect(await authManager.initAuthorisation());
+        }
+
+        throw e;
     }
 
     const botClient = new BotClient(env.BOT_TOKEN, sentry);
-    let guildMember = await botClient.getGuildMember(env.GUILD_ID, user.id);
+    let guildMember = await botClient.getGuildMember(env.GUILD_ID, data.discordUser.id);
     if (guildMember) {
         // We are already in this server
         return Response.redirect(
@@ -61,7 +49,7 @@ export async function handler(
         );
     }
 
-    const username = formatUser(user);
+    const username = formatUser(data.discordUser);
     let applyRole: string | null = null;
 
     const preauthKey = `preauth:${username}`;
@@ -75,8 +63,8 @@ export async function handler(
     try {
         guildMember = await botClient.joinGuild(
             env.GUILD_ID,
-            token,
-            user.id,
+            data.discordToken,
+            data.discordUser.id,
             applyRoles
         );
     } catch (e) {
@@ -96,10 +84,10 @@ export async function handler(
         const msg = authorisePendingUser(env, guildMember!);
         // NOTE: don't create a new message (and conflicting DB entry) if the
         // user already has a pending entry in the server
-        const existingMsg = await stateStore.getActionMessage(user.id);
+        const existingMsg = await stateStore.getActionMessage(data.discordUser.id);
         if (!existingMsg) {
             const createdMsg = await botClient.createMessage(env.PENDING_CHANNEL, msg);
-            await stateStore.insertActionMessage(user.id, createdMsg.id);
+            await stateStore.insertActionMessage(data.discordUser.id, createdMsg.id);
         }
     }
 

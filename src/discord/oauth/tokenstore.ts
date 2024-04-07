@@ -30,7 +30,7 @@ interface UpdatedTokenData {
 }
 
 export interface DiscordAuthInfo {
-    token: string,
+    accessToken: string,
     refreshToken: string,
     expiresAt: Date,
 }
@@ -69,7 +69,7 @@ export class TokenStore {
     private async encryptInfo(info: DiscordAuthInfo): Promise<StorageData> {
         const iv = this.iv();
         const [encryptedToken, encryptedRefreshToken] = await Promise.all([
-            this.encrypt(iv, info.token),
+            this.encrypt(iv, info.accessToken),
             this.encrypt(iv, info.refreshToken),
         ]);
 
@@ -86,25 +86,35 @@ export class TokenStore {
 
     private async decryptInfo(data: StorageData): Promise<DiscordAuthInfo> {
         const iv_ = new Uint8Array(data.iv);
-        const token_ = new Uint8Array(data.encrypted_token);
+        const accessToken_ = new Uint8Array(data.encrypted_token);
         const refreshToken_ = new Uint8Array(data.encrypted_refresh_token);
-        const [token, refreshToken] = await Promise.all([
-            this.decrypt(token_, iv_),
+        const [accessToken, refreshToken] = await Promise.all([
+            this.decrypt(accessToken_, iv_),
             this.decrypt(refreshToken_, iv_),
         ]);
 
         return {
-            token,
+            accessToken,
             refreshToken,
             expiresAt: new Date(data.expires_at),
         };
     }
 
-    private async decryptOldPartial(data: UpdatedTokenData): Promise<string> {
+    // NOTE: this is kinda a weird function, but it abstracts away the common
+    // logic on upsert/replace of:
+    // - decrypt the old value
+    // - check to see if it's the same as the new value
+    // - if it's not, return the old value so we can explicitly call revoke on it
+    private async decryptOldPartial(newToken: string, data: UpdatedTokenData): Promise<string | null> {
         // TODO: need to catch exceptions(??)
         const token = new Uint8Array(data.old_encrypted_token);
         const iv = new Uint8Array(data.old_iv);
-        return await this.decrypt(token, iv);
+        const oldToken = await this.decrypt(token, iv);
+        if (oldToken !== newToken) {
+            return oldToken;
+        }
+
+        return null;
     }
 
     public async get(userId: string): Promise<DiscordAuthInfo | null> {
@@ -178,12 +188,12 @@ export class TokenStore {
 
         if (updated.results && updated.results["old_encrypted_token"]) {
             // TODO: need to catch exceptions(??)
-            const old = await this.decryptOldPartial(updated.results);
+            const old = await this.decryptOldPartial(info.accessToken, updated.results);
             // NOTE: Because discord can give us the same token when a user
             // re-authorises, we need to make sure we do not revoke a
             // still-current token. Maybe we can improve this so we always use
             // the same IV?
-            if (old !== info.token) {
+            if (old !== info.accessToken) {
                 return old;
             }
         }
@@ -220,7 +230,7 @@ export class TokenStore {
 
         if (updated.results && updated.results["old_encrypted_token"]) {
             // TODO: need to catch exceptions(??)
-            return await this.decryptOldPartial(updated.results as any);
+            return await this.decryptOldPartial(info.accessToken, updated.results as any);
         }
 
         return null;

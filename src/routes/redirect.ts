@@ -1,8 +1,8 @@
 import { serialize as serializeCookie } from "cookie";
-import { AUTH_COOKIE_NAME, OAuthClient } from "../discord/oauth";
-import { SessionManager } from "../discord/oauth/session";
-import { Env, importJwtKey, importOauthKey } from "../env";
+import { AUTH_COOKIE_NAME } from "../auth";
+import { Env } from "../env";
 import { Sentry } from "../sentry";
+import { authManagerFromEnv } from "../util";
 import { DEFAULT_HEADERS, respond400 } from "../util/http";
 
 export async function handler(req: Request,
@@ -23,30 +23,9 @@ export async function handler(req: Request,
         return respond400();
     }
 
-    const tokenKey = await importOauthKey(env.OAUTH_ENCRYPTION_KEY);
-    const oauthClient = new OAuthClient({
-        clientId: env.CLIENT_ID,
-        clientSecret: env.CLIENT_SECRET,
-        redirectUri: env.REDIRECT_URI,
-        tokenKey,
-        tokenDB: env.OAUTH_DB,
-        stateKV: env.OAUTH,
-        sentry
-    });
-    const ok = await oauthClient.checkState(state);
-    if (!ok) {
-        return respond400();
-    }
-
-    const token = await oauthClient.getToken(code);
-    if (!token) {
-        return respond400();
-    }
-
-    const jwtKey = await importJwtKey(env.JWT_SIGNING_KEY);
-    const mgr = new SessionManager(jwtKey);
-
-    const jwt = await mgr.sign({ discordID: token.user });
+    const authManager = await authManagerFromEnv(env, sentry);
+    const exchange = await authManager.handleOAuthRedirect(code, state);
+    const jwt = await authManager.createUserToken(exchange.user.id);
 
     return new Response("", {
         status: 302,
