@@ -177,7 +177,14 @@ export class TokenStore {
 
         if (updated.results && updated.results["old_encrypted_token"]) {
             // TODO: need to catch exceptions(??)
-            return await this.decryptOldPartial(updated.results);
+            const old = await this.decryptOldPartial(updated.results);
+            // NOTE: Because discord can give us the same token when a user
+            // re-authorises, we need to make sure we do not revoke a
+            // still-current token. Maybe we can improve this so we always use
+            // the same IV?
+            if (old !== info.token) {
+                return old;
+            }
         }
 
         return null;
