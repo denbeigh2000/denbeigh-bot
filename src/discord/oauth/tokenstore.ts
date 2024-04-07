@@ -50,9 +50,10 @@ export class TokenStore {
         return crypto.getRandomValues(new Uint8Array(12));
     }
 
-    private async decrypt(data: ArrayBuffer, iv: Uint8Array): Promise<string> {
-        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCR", iv }, this.key, data);
-        return new TextDecoder().decode(decrypted);
+    private async decrypt(data: Uint8Array, iv: Uint8Array): Promise<string> {
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, this.key, data);
+        const s = new TextDecoder().decode(decrypted);
+        return s;
     }
 
     private async encrypt(iv: Uint8Array, secret: string): Promise<ArrayBuffer> {
@@ -83,23 +84,24 @@ export class TokenStore {
     }
 
     private async decryptInfo(data: StorageData): Promise<DiscordAuthInfo> {
-        const parsedIv = new Uint8Array(data.iv);
-        const [decryptedToken, decryptedRefreshToken] = await Promise.all([
-            this.decrypt(data.encrypted_token, parsedIv),
-            this.decrypt(data.encrypted_refresh_token, parsedIv),
+        const iv_ = new Uint8Array(data.iv);
+        const token_ = new Uint8Array(data.encrypted_token);
+        const refreshToken_ = new Uint8Array(data.encrypted_refresh_token);
+        const [token, refreshToken] = await Promise.all([
+            this.decrypt(token_, iv_),
+            this.decrypt(refreshToken_, iv_),
         ]);
 
         return {
-            token: decryptedToken,
-            refreshToken: decryptedRefreshToken,
+            token,
+            refreshToken,
             expiresAt: new Date(data.expires_at),
         };
     }
 
     private async decryptOldPartial(data: UpdatedTokenData): Promise<string> {
         // TODO: need to catch exceptions(??)
-        console.debug(data);
-        const token = data.old_encrypted_token;
+        const token = new Uint8Array(data.old_encrypted_token);
         const iv = new Uint8Array(data.old_iv);
         return await this.decrypt(token, iv);
     }
@@ -107,7 +109,7 @@ export class TokenStore {
     public async get(userId: string): Promise<DiscordAuthInfo | null> {
         const fetched: D1ResultOne = await this.qb.fetchOne({
             tableName: TABLE_NAME,
-            fields: ["refresh_token", "expires_at", "user"],
+            fields: ["encrypted_token", "encrypted_refresh_token", "expires_at", "iv", "user"],
             where: {
                 conditions: "user = ?1",
                 params: [userId],
@@ -173,10 +175,8 @@ export class TokenStore {
             throw new Error("not able to insert new access token");
         }
 
-        // TODO: need to confirm this type (dict? list?)
         if (updated.results && updated.results["old_encrypted_token"]) {
             // TODO: need to catch exceptions(??)
-            console.debug(updated.results);
             return await this.decryptOldPartial(updated.results);
         }
 
@@ -210,10 +210,8 @@ export class TokenStore {
             throw new Error("not able to replace access token");
         }
 
-        // TODO: need to confirm this type (dict? list?)
         if (updated.results && updated.results["old_encrypted_token"]) {
             // TODO: need to catch exceptions(??)
-            console.debug(updated.results);
             return await this.decryptOldPartial(updated.results as any);
         }
 

@@ -176,7 +176,7 @@ export class OAuthClient {
 
         this.sentry.breadcrumbFromHTTP("refreshing oauth token", request.url, response);
 
-        if (oldToken) {
+        if (oldToken && oldToken !== token.accessToken) {
             // TODO: exception catching?
             await this.revokeToken(oldToken);
         }
@@ -191,6 +191,8 @@ export class OAuthClient {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: new URLSearchParams([
+                ["client_id", this.clientId],
+                ["client_secret", this.clientSecret],
                 ["token", token],
                 ["token_type_hint", "access_token"],
             ]),

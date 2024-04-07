@@ -1,5 +1,6 @@
 import { OAuthClient } from "../discord/oauth";
-import { Env, importOauthKey } from "../env";
+import { SessionManager } from "../discord/oauth/session";
+import { Env, importJwtKey, importOauthKey } from "../env";
 import { Sentry } from "../sentry";
 import { respond400 } from "../util/http";
 
@@ -41,13 +42,18 @@ export async function handler(req: Request,
         return respond400();
     }
 
+    const jwtKey = await importJwtKey(env.JWT_SIGNING_KEY);
+    const mgr = new SessionManager(jwtKey);
+
+    const jwt = await mgr.sign({ discordID: token.user });
+
     return new Response("", {
         status: 302,
         headers: new Headers({
             // TODO: it'd be nice if we didn't hardcode this, and just
             // redirected to wherever the user wanted to go
             Location: "/join",
-            "Set-Cookie": `auth=${token.accessToken}; Secure`,
+            "Set-Cookie": `auth=${jwt}; Secure`,
         }),
     });
 }
