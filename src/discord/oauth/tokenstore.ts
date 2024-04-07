@@ -109,7 +109,7 @@ export class TokenStore {
             tableName: TABLE_NAME,
             fields: ["refresh_token", "expires_at", "user"],
             where: {
-                conditions: "user_id = ?1",
+                conditions: "user = ?1",
                 params: [userId],
             },
         }).execute();
@@ -153,7 +153,7 @@ export class TokenStore {
                 expires_at: data.expires_at,
             },
             onConflict: {
-                column: "user_id",
+                column: "user",
                 data: {
                     encrypted_refresh_token: new Raw("excluded.encrypted_refresh_token"),
                     encrypted_token: new Raw("excluded.encrypted_token"),
@@ -199,7 +199,7 @@ export class TokenStore {
                 expires_at: data.expires_at,
             },
             where: {
-                conditions: "user_id = ?1",
+                conditions: "user = ?1",
                 params: [userId],
             },
             returning: ["old_encrypted_token", "old_iv"],
