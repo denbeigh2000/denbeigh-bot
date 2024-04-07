@@ -4,18 +4,25 @@ import {
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
 
-import { BotClient } from "../../../discord/client";
-import { Env } from "../../../env";
-import { Sentry } from "../../../sentry";
+import { BotClient } from "../../../../discord/client";
+import { Env } from "../../../../env";
+import { Sentry } from "../../../../sentry";
 
-import { GroupManager } from "./manager";
+import { GroupManager } from "../../../../group/manager";
 import { handler as createHandler, subcommand as createSubcommand } from "./create";
 import { handler as deleteHandler, subcommand as deleteSubcommand } from "./delete";
 import { handler as leaveHandler, subcommand as leaveSubcommand } from "./leave";
 import { handler as listHandler, subcommand as listSubcommand } from "./list";
 import { handler as joinHandler, subcommand as joinSubcommand } from "./join";
-import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
-import { genericError } from "../../../discord/messages/errors";
+import { APIInteractionResponse, InteractionResponseType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { genericError } from "../../../../discord/messages/errors";
+
+export const helpText = `\`/group list\`: List open groups
+\`/group join <name>\`: Join a group
+\`/group leave <name>\`: Leave a group
+\`/group create <name>\`: Create a new group
+\`/group delete <name>\`: Delete a group`
+
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
@@ -34,7 +41,19 @@ export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _ctx: ExecutionContext,
+    sentry: Sentry,
+): Promise<APIInteractionResponse | null> {
+    return {
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: await inner(client, interaction, env, sentry),
+    };
+}
+
+
+async function inner(
+    client: BotClient,
+    interaction: APIChatInputApplicationCommandGuildInteraction,
+    env: Env,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
     const manager = new GroupManager(

@@ -1,8 +1,8 @@
 import { Snowflake } from "discord-api-types/globals"
 import { D1QB, D1Result, D1ResultOne, JoinTypes, Query } from "workers-qb"
 
-import { AuxRole, AUX_ROLE_META, ID_TO_AUX_ROLE, ID_TO_ROLE, Role, ROLE_META } from "../../../roles";
-import { Sentry } from "../../../sentry";
+import { AuxRole, AUX_ROLE_META, ID_TO_AUX_ROLE, ID_TO_ROLE, Role, ROLE_META } from "../roles";
+import { Sentry } from "../sentry";
 
 const PENDING_TABLE = "users_pending_entry";
 const INT_STATE_TABLE = "pending_user_interaction_state";

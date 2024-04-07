@@ -1,8 +1,9 @@
-import { GroupManager } from "./manager";
 import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
-import { genericEphemeral, genericError } from "../../../discord/messages/errors";
-import { idsToRole, Role } from "../../../roles";
-import { Env } from "../../../env";
+
+import { GroupManager } from "../../../../group/manager";
+import { genericEphemeral, genericError } from "../../../../discord/messages/errors";
+import { Env } from "../../../../env";
+import { idsToRole, Role } from "../../../../roles";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
@@ -44,3 +45,4 @@ export const handler = async (
         `Join it with \`/group join name:${newGroup.name}\``,
     ].join("\n"));
 };
+

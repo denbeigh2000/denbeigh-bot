@@ -1,17 +1,11 @@
-import {
-    APIChatInputApplicationCommandGuildInteraction,
-    ApplicationCommandOptionType,
-} from "discord-api-types/payloads/v10";
+import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, ApplicationCommandOptionType, InteractionResponseType, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody, RESTPostAPIWebhookWithTokenJSONBody, Snowflake } from "discord-api-types/v10";
+import { Env } from "../../../env";
+import { idsToRole, Role, roleToID } from "../../../roles";
+import { Sentry } from "../../../sentry";
+import { BotClient } from "../../client";
+import { genericEphemeral, genericError } from "../../messages/errors";
 
-import { Env } from "../../env";
-import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
-import { BotClient } from "../../discord/client";
-import { genericEphemeral, genericError } from "../../discord/messages/errors";
-import { Sentry } from "../../sentry";
-import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
-import { idsToRole, Role, roleToID } from "../../roles";
-
-const USERNAME_PATTERN = /^^.+#[0-9]{4}$/;
+export const helpText = "`/invite <username> <role>`: Pre-authorise a new member (role limits apply)";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "invite",
@@ -21,7 +15,7 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
             type: ApplicationCommandOptionType.String,
             name: "username",
             description:
-                "Username of the user to invite (e.g., User#0001)",
+                "Username of the user to invite",
             required: true,
         },
         {
@@ -51,8 +45,19 @@ export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _ctx: ExecutionContext,
-    sentry: Sentry
+    sentry: Sentry,
+): Promise<APIInteractionResponse | null> {
+    return {
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: await inner(client, interaction, env, sentry),
+    };
+}
+
+async function inner(
+    client: BotClient,
+    interaction: APIChatInputApplicationCommandGuildInteraction,
+    env: Env,
+    sentry: Sentry,
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
     /* TODO: Most of this block should be factored out */
     const { options } = interaction.data;
@@ -62,7 +67,7 @@ export async function handler(
         return genericError(msg);
     }
 
-    const awarder = interaction.member!.user.id;
+    const awarder = interaction.member.user.id;
     let username: string | null = null;
     let role: number | null = null;
     for (const option of options) {
@@ -85,16 +90,13 @@ export async function handler(
         return { content: msg, };
     }
 
-    if (!username.match(USERNAME_PATTERN)) {
-        return {
-            content: `${username} does not look like a valid username, expected something like \`User#0001\``,
-        };
-    }
-
     const userRole = idsToRole(env, interaction.member.roles);
     if (!userRole) {
         return { content: "You have no valid roles" };
     }
+
+    // TODO: does this work as i expect it does??
+    // needs a review and a comment
     if (userRole !== Role.Moderator && role && userRole <= role) {
         return genericError("You do not have sufficient privileges to award this role");
     }

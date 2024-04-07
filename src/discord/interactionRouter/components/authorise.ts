@@ -1,7 +1,6 @@
 import {
     APIGuildMember,
     APIMessageComponentGuildInteraction,
-    APIMessageComponentInteraction,
     APIMessageStringSelectInteractionData,
     ComponentType,
 } from "discord-api-types/payloads/v10";
@@ -12,7 +11,7 @@ import { admittedUser, bannedUser } from "../../../discord/messages/log";
 import { Env } from "../../../env";
 import { Sentry } from "../../../sentry";
 import { Snowflake } from "discord-api-types/globals";
-import { Results, StateStore } from "./statestore";
+import { Results, StateStore } from "../../../admission/statestore";
 import { auxRoleToID, idsToRole, ID_TO_AUX_ROLE, ID_TO_ROLE, roleToID } from "../../../roles";
 import { getMultiUserId, MultiUser } from "../../../discord";
 
@@ -144,19 +143,11 @@ async function handleSelect(data: APIMessageStringSelectInteractionData, env: En
 }
 
 export async function handler(
-    rawInteraction: APIMessageComponentInteraction,
+    _client: BotClient,
+    interaction: APIMessageComponentGuildInteraction,
     env: Env,
-    _ctx: ExecutionContext,
     sentry: Sentry
 ) {
-    if (!rawInteraction.guild_id) {
-        // Not able to handle this interaction outside of a guild.
-        sentry.captureMessage("Received authorise interaction outside of a guild", "error");
-        return;
-    }
-
-    const interaction = rawInteraction as APIMessageComponentGuildInteraction;
-
     const now = new Date();
     const data = interaction.data;
     const customId = data.custom_id;

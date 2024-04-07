@@ -1,9 +1,9 @@
 import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
 
-import { genericEphemeral, genericError } from "../../../discord/messages/errors";
-import { Env } from "../../../env";
-import { idsToRole, Role } from "../../../roles";
-import { GroupManager } from "./manager";
+import { genericEphemeral, genericError } from "../../../../discord/messages/errors";
+import { Env } from "../../../../env";
+import { GroupManager } from "../../../../group/manager";
+import { idsToRole, Role } from "../../../../roles";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
@@ -44,3 +44,4 @@ export const handler = async (
 
     return genericEphemeral(`Deleted group \`${name}\``)
 }
+

@@ -9,7 +9,7 @@ import { roleToID } from "../roles";
 import { Sentry } from "../sentry";
 import { authManagerFromEnv, formatUser } from "../util";
 import { returnStatus } from "../util/http";
-import { StateStore } from "./interaction/authorise/statestore";
+import { StateStore } from "../admission/statestore";
 
 export async function handler(
     req: Request,

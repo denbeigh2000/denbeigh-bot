@@ -1,5 +1,5 @@
 import { APIRole, APIGuildMember } from "discord-api-types/v10";
-import { BotClient } from "../../../discord/client";
+import { BotClient } from "../discord/client/bot";
 
 const PREFIX = "group-";
 
@@ -156,4 +156,3 @@ export class GroupManager {
         return group;
     }
 }
-

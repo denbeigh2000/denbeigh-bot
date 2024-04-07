@@ -1,16 +1,12 @@
-import {
-    APIChatInputApplicationCommandGuildInteraction,
-    ApplicationCommandOptionType,
-} from "discord-api-types/payloads/v10";
-import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
-import { RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, ApplicationCommandOptionType, InteractionResponseType, RESTPostAPIChatInputApplicationCommandsJSONBody, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import { Env } from "../../../env";
+import { idsToRole, Role, roleToID } from "../../../roles";
+import { Sentry } from "../../../sentry";
+import { BotClient } from "../../client/bot";
+import { genericEphemeral, genericError } from "../../messages/errors";
+import { changedRole } from "../../messages/log";
 
-import { BotClient } from "../../discord/client";
-import { genericEphemeral, genericError } from "../../discord/messages/errors";
-import { changedRole } from "../../discord/messages/log";
-import { Env } from "../../env";
-import { idsToRole, Role, roleToID } from "../../roles";
-import { Sentry } from "../../sentry";
+export const helpText = "`/promote <username> <role>`: Change a user's membership level (role limits apply)";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
@@ -50,7 +46,18 @@ export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    _ctx: ExecutionContext,
+    sentry: Sentry,
+): Promise<APIInteractionResponse | null> {
+    return {
+        type: InteractionResponseType.ChannelMessageWithSource,
+        data: await inner(client, interaction, env, sentry),
+    };
+}
+
+async function inner(
+    client: BotClient,
+    interaction: APIChatInputApplicationCommandGuildInteraction,
+    env: Env,
     sentry: Sentry
 ): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
     const now = new Date();
