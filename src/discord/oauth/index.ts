@@ -7,10 +7,9 @@ import { UserClient } from "../client";
 import { Sentry } from "../../sentry";
 import { TokenStore } from "./tokenstore";
 import { StateStore } from "./statestore";
-import { SessionManager } from "./session";
-import { importOauthKey } from "../../env";
 
 const API_BASE_URL = "https://discordapp.com/api"
+export const AUTH_COOKIE_NAME = "session";
 
 const SCOPES = [OAuth2Scopes.Identify, OAuth2Scopes.GuildsJoin, OAuth2Scopes.RoleConnectionsWrite];
 
@@ -28,7 +27,7 @@ export function getAuthToken(req: Request): string | null {
         return null;
     }
 
-    return parseCookie(cookieStr)["auth"] || null;
+    return parseCookie(cookieStr)[AUTH_COOKIE_NAME] || null;
 }
 
 export interface AccessTokenResponse {

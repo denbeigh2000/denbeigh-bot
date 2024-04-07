@@ -1,4 +1,5 @@
-import { OAuthClient } from "../discord/oauth";
+import { serialize as serializeCookie } from "cookie";
+import { AUTH_COOKIE_NAME, OAuthClient } from "../discord/oauth";
 import { SessionManager } from "../discord/oauth/session";
 import { Env, importJwtKey, importOauthKey } from "../env";
 import { Sentry } from "../sentry";
@@ -53,7 +54,7 @@ export async function handler(req: Request,
             // TODO: it'd be nice if we didn't hardcode this, and just
             // redirected to wherever the user wanted to go
             Location: "/join",
-            "Set-Cookie": `auth=${jwt}; Secure`,
+            "Set-Cookie": serializeCookie(AUTH_COOKIE_NAME, jwt, { secure: true }),
         }),
     });
 }
