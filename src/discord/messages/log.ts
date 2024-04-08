@@ -40,7 +40,7 @@ export function bannedUser(
         content: `<@&${env.MOD_ROLE}>`,
         embeds: [
             {
-                title: "User admitted",
+                title: "User banned",
                 description: formatMultiUser(bannee),
                 color: COLOURS.RED,
                 fields: [
