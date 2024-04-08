@@ -4,12 +4,12 @@ import { Sentry } from "../../../sentry";
 import { BotClient } from "../../client";
 import { genericError } from "../../messages/errors";
 
-export const helpText = "Remind chat of the no-work policy";
+export const helpText = "`/nowork [<user>]`: Remind the chat of the no-work policy.";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
     name: "nowork",
-    description: "`/nowork [<user>]`: Remind the chat of the no-work policy.",
+    description: "Remind the chat of the no-work policy.",
     options: [
         {
             type: ApplicationCommandOptionType.User,
