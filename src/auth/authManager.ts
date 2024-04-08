@@ -1,6 +1,6 @@
 import { APIUser } from "discord-api-types/payloads/v10/user";
 import { UserClient } from "../discord/client";
-import { OAuthClient as DiscordOAuthClient, buildRedirectUri } from "../discord/oauth";
+import { OAuthClient as DiscordOAuthClient } from "../discord/oauth";
 import { StateStore } from "../discord/oauth/statestore";
 import { TokenStore } from "../discord/oauth/tokenstore";
 import { Sentry } from "../sentry";
@@ -79,10 +79,8 @@ export class AuthManager {
     signer: SessionSigner;
     states: StateStore;
     tokens: TokenStore;
-    oauth: OAuthParams;
-    sentry: Sentry;
-
     discord: DiscordOAuthClient;
+    sentry: Sentry;
 
     constructor({
         oauthParams,
@@ -95,16 +93,13 @@ export class AuthManager {
         this.signer = new SessionSigner(jwtKey);
         this.tokens = new TokenStore(tokenKey, tokenDB, sentry);
         this.states = new StateStore(stateKV);
-        this.oauth = oauthParams;
+        this.discord = new DiscordOAuthClient({ ...oauthParams, sentry });
         this.sentry = sentry;
-
-        // @ts-ignore: TODO
-        this.discord = new DiscordOAuthClient();
     }
 
     public async initAuthorisation(): Promise<URL> {
         const state = await this.states.createState();
-        return buildRedirectUri(state);
+        return this.discord.buildRedirectUri(state);
     }
 
     public async handleOAuthRedirect(code: string, state: string): Promise<OAuthExchange> {

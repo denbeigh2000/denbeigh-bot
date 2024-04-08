@@ -9,7 +9,7 @@ export const helpText = "Remind chat of the no-work policy";
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
     name: "nowork",
-    description: "Remind the chat of the no-work policy.",
+    description: "`/nowork [<user>]`: Remind the chat of the no-work policy.",
     options: [
         {
             type: ApplicationCommandOptionType.User,

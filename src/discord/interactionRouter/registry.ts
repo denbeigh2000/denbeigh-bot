@@ -14,9 +14,9 @@ export function getRouter(env: Env, sentry: Sentry): InteractionRouter {
     const router = new InteractionRouter(env, sentry);
 
     router.registerCommand("ping", pingHandler, pingDesc, pingHelpText);
-    router.registerCommand("nowork", noworkHandler, noworkDesc, noworkHelpText);
-    router.registerCommand("promote", promoteHandler, promoteDesc, promoteHelpText);
     router.registerCommand("group", groupHandler, groupDesc, groupHelpText);
+    router.registerCommand("promote", promoteHandler, promoteDesc, promoteHelpText);
+    router.registerCommand("nowork", noworkHandler, noworkDesc, noworkHelpText);
     router.registerCommand("invite", inviteHandler, inviteDesc, inviteHelpText);
 
     router.registerComponent("authorise", authoriseHandler);

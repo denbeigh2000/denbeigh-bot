@@ -1,29 +1,11 @@
 import { OAuth2Scopes } from "discord-api-types/payloads/v10";
-import { Snowflake } from "discord-api-types/globals";
 import { Routes } from "discord-api-types/v10";
 
-import { UserClient } from "../client";
 import { Sentry } from "../../sentry";
-import { TokenStore } from "./tokenstore";
-import { StateStore } from "./statestore";
 
 const API_BASE_URL = "https://discordapp.com/api"
 
 const SCOPES = [OAuth2Scopes.Identify, OAuth2Scopes.GuildsJoin, OAuth2Scopes.RoleConnectionsWrite];
-
-export function buildRedirectUri(state: string): URL {
-    const url = new URL(API_BASE_URL + Routes.oauth2Authorization());
-    const params = new URLSearchParams([
-        ["response_type", "code"],
-        ["client_id", this.oauth.clientID],
-        ["scope", SCOPES.join(" ")],
-        ["state", state],
-        ["redirect_uri", this.oauth.redirectURI],
-        ["prompt", "none"],
-    ]);
-    url.search = params.toString();
-    return url;
-}
 
 export interface AccessTokenResponse {
     accessToken: string;
@@ -34,7 +16,7 @@ export interface AccessTokenResponse {
 }
 
 function parseTokenResponse(text: string): AccessTokenResponse {
-    const data = JSON.parse(responseText);
+    const data = JSON.parse(text);
     const expiresIn = data["expires_in"];
     const expiresAt = Date.now() + expiresIn * 1000;
     const accessToken = data["access_token"];
@@ -50,22 +32,37 @@ function parseTokenResponse(text: string): AccessTokenResponse {
 }
 
 export class OAuthClient {
-    clientId: string;
+    clientID: string;
     clientSecret: string;
-    redirectUri: string;
+    redirectURI: string;
     sentry: Sentry;
 
     constructor(params: {
-        clientId: string,
+        clientID: string,
         clientSecret: string,
-        redirectUri: string,
+        redirectURI: string,
         sentry: Sentry
     }) {
-        this.clientId = params.clientId;
+        this.clientID = params.clientID;
         this.clientSecret = params.clientSecret;
-        this.redirectUri = params.redirectUri;
+        this.redirectURI = params.redirectURI;
         this.sentry = params.sentry;
     }
+
+    public buildRedirectUri(state: string): URL {
+        const url = new URL(API_BASE_URL + Routes.oauth2Authorization());
+        const params = new URLSearchParams([
+            ["response_type", "code"],
+            ["client_id", this.clientID],
+            ["scope", SCOPES.join(" ")],
+            ["state", state],
+            ["redirect_uri", this.redirectURI],
+            ["prompt", "none"],
+        ]);
+        url.search = params.toString();
+        return url;
+    }
+
 
     public async exchangeCode(code: string): Promise<AccessTokenResponse | null> {
         const request = new Request(API_BASE_URL + Routes.oauth2TokenExchange(), {
@@ -74,11 +71,11 @@ export class OAuthClient {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: new URLSearchParams({
-                client_id: this.clientId,
+                client_id: this.clientID,
                 client_secret: this.clientSecret,
                 grant_type: "authorization_code",
                 code,
-                redirect_uri: this.redirectUri,
+                redirect_uri: this.redirectURI,
             }),
         });
         const response = await fetch(request);
@@ -91,8 +88,7 @@ export class OAuthClient {
             return null;
         }
 
-        const token = await this.upsertToken(text);
-        return token;
+        return parseTokenResponse(text);
     }
 
     public async refreshToken(
@@ -108,7 +104,7 @@ export class OAuthClient {
             body: new URLSearchParams({
                 // TODO: I don't think this is the right place to provide
                 // id/secret?
-                client_id: this.clientId,
+                client_id: this.clientID,
                 client_secret: this.clientSecret,
                 grant_type: "refresh_token",
                 refresh_token: refreshToken,
@@ -116,26 +112,14 @@ export class OAuthClient {
         });
 
         const response = await fetch(request);
+        this.sentry.breadcrumbFromHTTP("refreshing oauth token", request.url, response);
         const text = await response.text();
         if (response.status >= 400) {
             console.log(`Error: status ${response.status}, ${text}`);
             return null;
         }
 
-        const token = parseTokenResponse(text);
-        const oldToken = await this.tokenStore.replace(token.user, {
-            accessToken: token.accessToken,
-            refreshToken: token.refreshToken,
-            expiresAt: new Date(token.expiresAt),
-        });
-
-        this.sentry.breadcrumbFromHTTP("refreshing oauth token", request.url, response);
-
-        if (oldToken && oldToken !== token.accessToken) {
-            await this.revokeToken(oldToken);
-        }
-
-        return token;
+        return parseTokenResponse(text);
     }
 
     public async revokeToken(token: string) {
@@ -145,7 +129,7 @@ export class OAuthClient {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: new URLSearchParams([
-                ["client_id", this.clientId],
+                ["client_id", this.clientID],
                 ["client_secret", this.clientSecret],
                 ["token", token],
                 ["token_type_hint", "access_token"],
