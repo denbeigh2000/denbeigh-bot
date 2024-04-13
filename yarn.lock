@@ -1662,11 +1662,6 @@ workerd@1.20231025.0:
     "@cloudflare/workerd-linux-arm64" "1.20231025.0"
     "@cloudflare/workerd-windows-64" "1.20231025.0"
 
-workers-qb@^1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/workers-qb/-/workers-qb-1.1.1.tgz#ed5afc1d839cc9607d0afed9c9f8446f3fb91820"
-  integrity sha512-ByJ+eDMQ83NRbXh9mWoUL1iaDj6LQIaJbVzKJabxNK4QlfPYEAIJ2trMVVkrw8o7LrrZGlrZknGeGLtMy0m0kQ==
-
 wrangler@^3:
   version "3.15.0"
   resolved "https://registry.yarnpkg.com/wrangler/-/wrangler-3.15.0.tgz#8b5d6d9b01f75273b50b14ed0b1fa9013f26aa6a"
