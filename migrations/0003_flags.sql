@@ -1,0 +1,23 @@
+-- Migration number: 0003 	 2024-04-13T22:58:38.274Z
+
+CREATE TABLE flags (
+    country_code    TEXT NOT NULL,
+    -- NOTE: having NOT NULL means we can't really guard against two requests
+    -- making the same role at the same time. Maybe reconsider someday?
+    role_id         TEXT NOT NULL,
+    -- If >0, marked for deletion
+    tombstoned      INTEGER NOT NULL DEFAULT 0,
+
+    PRIMARY KEY (country_code, tombstoned)
+);
+
+-- Want this so we can efficiently join flags on user_flags
+CREATE INDEX idx_flags_country_code ON flags (country_code);
+
+CREATE TABLE user_flags (
+    user_id         TEXT NOT NULL PRIMARY KEY,
+    country_code    TEXT NOT NULL,
+);
+
+-- Want this so we can efficiently join flags on user_flags
+CREATE INDEX idx_flags_country_code ON user_flags (country_code);
