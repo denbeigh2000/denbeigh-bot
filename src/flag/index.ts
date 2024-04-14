@@ -1,5 +1,6 @@
 import { Snowflake } from "discord-api-types/globals";
-import { getName as getCountryName, toAlpha2 } from "i18n-iso-countries";
+import i18n from "i18n-iso-countries";
+import en from "i18n-iso-countries/langs/en.json";
 import { BotClient } from "../discord/client";
 import { Sentry } from "../sentry";
 import { FlagRole, FlagRoleStore } from "./store";
@@ -30,10 +31,12 @@ export class FlagManager {
         this.guildID = guildID;
         this.botClient = botClient;
         this.roleStore = new FlagRoleStore(flagDB, sentry);
+
+        i18n.registerLocale(en);
     }
 
     public async setFlag(userID: Snowflake, code: string) {
-        const countryCode = toAlpha2(code);
+        const countryCode = i18n.toAlpha2(code);
         if (!countryCode) {
             // TODO: better handling
             throw `Invalid country code ${code}`;
@@ -89,7 +92,10 @@ export class FlagManager {
         }
         // We should have a valid country name here, because we would have
         // thrown before otherwise.
-        const name = getCountryName(countryCode, "en", { select: "alias" })!;
+        const name = i18n.getName(countryCode, "en", { select: "alias" });
+        if (!name) {
+            throw `got ${name} name for ${countryCode} code`;
+        }
         const emoji = emojiFromCode(countryCode);
         const newRole = await this.botClient.createRole(this.guildID, name, false, undefined, emoji);
         const newNewRole = await this.roleStore.create({ roleID: newRole.id, countryCode: countryCode });
