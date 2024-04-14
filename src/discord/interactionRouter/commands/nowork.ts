@@ -40,6 +40,7 @@ Official support channels:
 - [User feedback](https://feedback.discord.com)
 - [Submit a bug report](https://dis.gd/bugreport)
 - [Report abuse/violations](https://discord.com/safety/360044103651-reporting-abusive-behavior-to-discord)
+- [Discord Support on Twitter](https://twitter.com/discord_support)
 `;
 }
 
