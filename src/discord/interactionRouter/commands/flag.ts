@@ -27,6 +27,7 @@ const setCommand: APIApplicationCommandSubcommandOption = {
             type: ApplicationCommandOptionType.String,
             name: "code",
             description: "ISO-3166-1 Country Code",
+            required: true,
         },
     ],
 };
