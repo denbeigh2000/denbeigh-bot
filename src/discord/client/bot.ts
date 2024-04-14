@@ -135,7 +135,8 @@ export class BotClient extends Client {
         guildId: Snowflake,
         name: string,
         mentionable?: boolean,
-        colour?: number
+        colour?: number,
+        emoji?: string,
     ): Promise<APIRole> {
         const route = Routes.guildRoles(guildId);
         const body: RESTPostAPIGuildRoleJSONBody = {
@@ -144,6 +145,7 @@ export class BotClient extends Client {
 
             // NOTE: Discord require the wrong spelling
             color: colour,
+            unicode_emoji: emoji,
         };
 
         const role = await this.rest.post(route, { body }) as RESTPostAPIGuildRoleResult;
