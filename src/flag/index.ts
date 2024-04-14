@@ -31,6 +31,7 @@ export class FlagManager {
         this.guildID = guildID;
         this.botClient = botClient;
         this.roleStore = new FlagRoleStore(flagDB, sentry);
+        this.sentry = sentry;
 
         i18n.registerLocale(en);
     }
