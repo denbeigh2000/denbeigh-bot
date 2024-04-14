@@ -2,7 +2,7 @@
 
 CREATE TABLE flag_roles (
     country_code    TEXT NOT NULL,
-    -- NOTE: having NOT NULL means we can't really guard against two requests
+    -- NOTE: having NOT NULL means we cannot really guard against two requests
     -- making the same role at the same time. Maybe reconsider someday?
     role_id         TEXT NOT NULL,
     -- If >0, marked for deletion
