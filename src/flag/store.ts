@@ -38,7 +38,7 @@ ON CONFLICT
     (country_code, tombstoned)
     DO NOTHING
 RETURNING
-    role_id;
+    role_id AS roleID;
 `;
 
 const setUserQuery = `
@@ -88,7 +88,7 @@ export class FlagRoleStore {
     }
 
     public async get(countryCode: string): Promise<FlagRole | null> {
-        const stmt = this.db.prepare(getQuery).bind(countryCode.toLowerCase());
+        const stmt = this.db.prepare(getQuery).bind(countryCode.toUpperCase());
         const { error, results } = await stmt.all<GetQueryResponse>();
         if (error) {
             this.sentry.captureMessage("failed to get role from db", "error", { originalException: error });
@@ -164,7 +164,7 @@ export class FlagRoleStore {
         }
     }
 
-    public async linkUser(userID: Snowflake, countryCode: string): Promise<Snowflake> {
+    public async linkUser(userID: Snowflake, countryCode: string) {
         const stmt = this.db.prepare(setUserQuery).bind(userID, countryCode);
         const { error } = await stmt.run();
         if (error) {
