@@ -8,7 +8,7 @@ import { idsToRole, Role } from "../../../../roles";
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "create",
-    description: "Create a new group",
+    description: "Create a new group (members only).",
     options: [
         {
             type: ApplicationCommandOptionType.String,

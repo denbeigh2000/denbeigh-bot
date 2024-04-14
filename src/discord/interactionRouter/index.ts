@@ -4,18 +4,18 @@ import { APIChatInputApplicationCommandGuildInteraction, APIInteraction, APIInte
 import { isApplicationCommandGuildInteraction, isChatInputApplicationCommandInteraction, isMessageComponentGuildInteraction, isMessageComponentInteraction } from "discord-api-types/utils/v10";
 import { Env } from "../../env";
 import { BotClient } from "../client/bot";
+import { formatCommandSet } from "./help";
 
 type CommandFn = (c: BotClient, i: APIChatInputApplicationCommandGuildInteraction, e: Env, s: Sentry) => Promise<APIInteractionResponse | null>;
 type ComponentFn = (c: BotClient, i: APIMessageComponentGuildInteraction, e: Env, s: Sentry) => Promise<void>;
 
 const HelpCommandDesc: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "help",
-    description: "Show information about bot commands",
+    description: "Show all supported bot commands.",
 };
 
 interface CmdInfo {
     discDescription: RESTPostAPIChatInputApplicationCommandsJSONBody,
-    helpText: string,
 }
 
 export class InteractionRouter {
@@ -31,9 +31,9 @@ export class InteractionRouter {
         this.commands = new SlashCommandSubrouter(env, sentry);
     }
 
-    public registerCommand(name: string, h: CommandFn, desc: RESTPostAPIChatInputApplicationCommandsJSONBody, help: string) {
+    public registerCommand(name: string, h: CommandFn, desc: RESTPostAPIChatInputApplicationCommandsJSONBody) {
         this.commands.register(name, h);
-        this.cmdInfo.push({ discDescription: desc, helpText: help });
+        this.cmdInfo.push({ discDescription: desc });
     }
 
     public registerComponent(action: string, h: ComponentFn) {
@@ -94,15 +94,11 @@ export class InteractionRouter {
     }
 
     private handleHelp(): APIInteractionResponseChannelMessageWithSource {
-
         return {
             type: InteractionResponseType.ChannelMessageWithSource,
             data: {
                 flags: MessageFlags.Ephemeral,
-                content: [
-                    ...this.cmdInfo.map(i => i.helpText),
-                    "`/help`: Display this help info",
-                ].join("\n\n"),
+                content: formatCommandSet(this.getCommandSpec()),
             },
         };
     }
