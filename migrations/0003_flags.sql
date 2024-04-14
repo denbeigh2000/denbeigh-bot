@@ -1,6 +1,6 @@
 -- Migration number: 0003 	 2024-04-13T22:58:38.274Z
 
-CREATE TABLE flags (
+CREATE TABLE flag_roles (
     country_code    TEXT NOT NULL,
     -- NOTE: having NOT NULL means we can't really guard against two requests
     -- making the same role at the same time. Maybe reconsider someday?
@@ -12,12 +12,12 @@ CREATE TABLE flags (
 );
 
 -- Want this so we can efficiently join flags on user_flags
-CREATE INDEX idx_flags_country_code ON flags (country_code);
+CREATE INDEX idx_flag_roles_country_code ON flag_roles (country_code);
 
 CREATE TABLE user_flags (
     user_id         TEXT NOT NULL PRIMARY KEY,
-    country_code    TEXT NOT NULL,
+    country_code    TEXT NOT NULL
 );
 
 -- Want this so we can efficiently join flags on user_flags
-CREATE INDEX idx_flags_country_code ON user_flags (country_code);
+CREATE INDEX idx_user_flags_country_code ON user_flags (country_code);
