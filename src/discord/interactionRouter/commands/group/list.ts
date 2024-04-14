@@ -6,7 +6,7 @@ import { GroupManager } from "../../../../group/manager";
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "list",
-    description: "List all current groups",
+    description: "List all available groups.",
 }
 
 export const handler = async (manager: GroupManager): Promise<RESTPostAPIWebhookWithTokenJSONBody> => {

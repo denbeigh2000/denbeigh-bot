@@ -6,12 +6,10 @@ import { BotClient } from "../../client/bot";
 import { genericEphemeral, genericError } from "../../messages/errors";
 import { changedRole } from "../../messages/log";
 
-export const helpText = "`/promote <username> <role>`: Change a user's membership level (role limits apply)";
-
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
     name: "promote",
-    description: "Sets the role of another user",
+    description: "Sets the role of another user (role limits apply).",
     options: [
         {
             type: ApplicationCommandOptionType.User,

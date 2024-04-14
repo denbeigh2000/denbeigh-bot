@@ -6,7 +6,7 @@ import { genericEphemeral, genericError } from "../../../../discord/messages/err
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "join",
-    description: "Join an existing group",
+    description: "Join an existing group.",
     options: [
         {
             type: ApplicationCommandOptionType.String,

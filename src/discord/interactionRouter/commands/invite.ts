@@ -5,11 +5,9 @@ import { Sentry } from "../../../sentry";
 import { BotClient } from "../../client";
 import { genericEphemeral, genericError } from "../../messages/errors";
 
-export const helpText = "`/invite <username> <role>`: Pre-authorise a new member (role limits apply)";
-
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "invite",
-    description: "Pre-approve a user to this server",
+    description: "Pre-authorise a new user (admission rules apply).",
     options: [
         {
             type: ApplicationCommandOptionType.String,

@@ -6,7 +6,7 @@ import { GroupManager } from "../../../../group/manager";
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "leave",
-    description: "Leave a group you're currently in",
+    description: "Leave a group you're currently in.",
     options: [
         {
             type: ApplicationCommandOptionType.String,

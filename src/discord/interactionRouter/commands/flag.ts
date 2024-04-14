@@ -14,14 +14,10 @@ import { Env } from "../../../env";
 import { BotClient } from "../../client";
 import { genericEphemeral, genericError } from "../../messages/errors";
 
-export const helpText = `\`/flag help\`: Help setting your flag
-\`/flag set <country code>\`: Set your flag
-\`/flag unset\`: Remove any flag you have set`
-
 const setCommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
     name: "set",
-    description: "Set a flag next to your display name.",
+    description: "Pick a flag to show.",
     options: [
         {
             type: ApplicationCommandOptionType.String,
@@ -40,7 +36,7 @@ const unsetCommand: APIApplicationCommandSubcommandOption = {
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "flag",
-    description: "Set a flag next to your display name",
+    description: "Manage the flag displayed next to your display name.",
     options: [
         setCommand,
         unsetCommand,

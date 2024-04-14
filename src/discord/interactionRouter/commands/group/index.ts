@@ -17,22 +17,15 @@ import { handler as joinHandler, subcommand as joinSubcommand } from "./join";
 import { APIInteractionResponse, InteractionResponseType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 import { genericError } from "../../../../discord/messages/errors";
 
-export const helpText = `\`/group list\`: List open groups
-\`/group join <name>\`: Join a group
-\`/group leave <name>\`: Leave a group
-\`/group create <name>\`: Create a new group
-\`/group delete <name>\`: Delete a group`
-
-
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
     name: "group",
-    description: "Manage the groups you're in to meet cool people",
+    description: "Add yourself to pingable groups to meet cool people!",
     options: [
         listSubcommand,
         joinSubcommand,
-        createSubcommand,
         leaveSubcommand,
+        createSubcommand,
         deleteSubcommand,
     ],
 };
