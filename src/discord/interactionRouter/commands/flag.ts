@@ -91,13 +91,13 @@ async function inner(
         return genericError(msg);
     }
 
-    if (options.length < 2) {
+    if (!subc.options) {
         const msg = "Missing country code";
         sentry.captureMessage(msg, "warning");
         return genericError(msg);
     }
 
-    const setOpt = options[1];
+    const setOpt = subc.options[0];
     if (setOpt.name !== "code") {
         const msg = `Unexpected sub-option ${setOpt.name}`;
         sentry.captureMessage(msg, "warning");
