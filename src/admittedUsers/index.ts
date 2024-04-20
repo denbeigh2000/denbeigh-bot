@@ -16,16 +16,51 @@ export interface UserRecord {
 }
 
 export class AdmittedUserManager {
+    denbeighID: Snowflake;
     sentry: Sentry;
     store: AdmittedUserStore;
 
-    constructor(db: D1Database, sentry: Sentry) {
+    constructor(denbeighID: Snowflake, db: D1Database, sentry: Sentry) {
+        this.denbeighID = denbeighID;
+
         this.sentry = sentry;
         this.store = new AdmittedUserStore(db, sentry);
     }
 
-    async addUser(opts: { userID: Snowflake, role: Role, auxRoles?: AuxRole[] }) {
-        const { userID, role, auxRoles } = opts;
+    private async isModerator(requesterID: Snowflake): Promise<boolean> {
+        if (requesterID === this.denbeighID) {
+            return true;
+        }
+
+        const user = await this.store.getUser(requesterID);
+        if (!user) {
+            throw `don't know about requester ${requesterID}?`;
+        }
+
+        return user.role === Role.Moderator;
+    }
+
+    private async isPermitted(requesterID: Snowflake, desiredRole: Role): Promise<boolean> {
+        if (requesterID === this.denbeighID) {
+            return true;
+        }
+
+        const requester = await this.store.getUser(requesterID);
+        if (!requester) {
+            throw `don't know about requester ${requesterID}?`;
+        }
+
+        return requester.role > desiredRole;
+    }
+
+    async addUser(opts: { requesterID: Snowflake, userID: Snowflake, role: Role, auxRoles?: AuxRole[] }) {
+        const { requesterID, userID, role, auxRoles } = opts;
+        const permitted = await this.isPermitted(requesterID, role);
+        if (!permitted) {
+            // TODO: proper error propagation
+            throw "not permitted";
+        }
+
         await this.store.upsertUser(userID, role);
         if (auxRoles) {
             await Promise.all(auxRoles.map(r => this.store.addAuxRole(userID, r)));
@@ -54,15 +89,28 @@ export class AdmittedUserManager {
         };
     }
 
-    async removeUser({ userID }: { userID: Snowflake }) {
+    async removeUser({ requesterID, userID }: { requesterID: Snowflake, userID: Snowflake }) {
+        if (!this.isModerator(requesterID)) {
+            // TODO: proper error propagation
+            throw `${requesterID} is not a moderator`;
+        }
+
         await this.store.deleteUser(userID);
     }
 
     async addAuxRole({ userID, auxRole }: { userID: Snowflake, auxRole: AuxRole }) {
+        if (userID !== this.denbeighID) {
+            throw `${userID} not permitted to manage aux roles`;
+        }
+
         await this.store.addAuxRole(userID, auxRole);
     }
 
     async removeAuxRole({ userID, auxRole }: { userID: Snowflake, auxRole: AuxRole }) {
+        if (userID !== this.denbeighID) {
+            throw `${userID} not permitted to manage aux roles`;
+        }
+
         await this.store.removeAuxRole(userID, auxRole);
     }
 }
