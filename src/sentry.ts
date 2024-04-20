@@ -3,13 +3,9 @@ import { Toucan, RequestData, LinkedErrors } from "toucan-js";
 import { Env } from "./env";
 import { formatUser } from "./util";
 
-export interface BuildkiteErrorShape {
-    message: string,
-    errors: any[],
-}
-
 export class Sentry extends Toucan {
-    constructor(request: Request, env: Env, context: ExecutionContext) {
+    constructor(params: { controller?: ScheduledController, request?: Request, env: Env, context: ExecutionContext }) {
+        const { request, env, context: context } = params;
         const allowedHeaders = ["X-GitHub-Event", "X-GitHub-Hook-ID", "User-Agent"]
 
         super({
@@ -25,9 +21,11 @@ export class Sentry extends Toucan {
             ],
         });
 
-        const ghEvent = request.headers.get("X-GitHub-Event");
-        if (ghEvent) {
-            this.setTag("githubEvent", ghEvent);
+        if (request) {
+            const ghEvent = request.headers.get("X-GitHub-Event");
+            if (ghEvent) {
+                this.setTag("githubEvent", ghEvent);
+            }
         }
     }
 
