@@ -41,10 +41,13 @@ export class AdmittedUserManager {
     }
 
     private async isPermitted(requesterID: Snowflake, desiredRole: Role): Promise<boolean> {
-        if (requesterID === this.denbeighID) {
+        if (await this.isModerator(requesterID)) {
             return true;
         }
 
+        // It's fine to repeat this call, we cache responses, and the cache
+        // only lasts for the lifetime of the request so things are unlikely to
+        // get complicated.
         const requester = await this.store.getUser(requesterID);
         if (!requester) {
             throw `don't know about requester ${requesterID}?`;

@@ -24,10 +24,12 @@ interface UserRow {
 }
 
 export class AdmittedUserStore {
+    userCache: { [userID: Snowflake]: UserItem }
     db: D1Database;
     sentry: Sentry;
 
     constructor(db: D1Database, sentry: Sentry) {
+        this.userCache = {};
         this.db = db;
         this.sentry = sentry;
     }
@@ -51,9 +53,25 @@ export class AdmittedUserStore {
             // TODO?
             throw error;
         }
+
+        // NOTE: Not inserting the record into cache here, because added_at
+        // could potentially be wrong.
     }
 
     async getUser(userID: Snowflake): Promise<UserItem | null> {
+        if (this.userCache[userID]) {
+            return this.userCache[userID];
+        }
+
+        const user = await this.getUserInner(userID);
+        if (user) {
+            this.userCache[userID] = user;
+        }
+
+        return user;
+    }
+
+    private async getUserInner(userID: Snowflake): Promise<UserItem | null> {
         const stmt = this.db.prepare(getQuery).bind(userID);
         const { results, error } = await stmt.all<UserRow>();
         if (error) {
@@ -86,6 +104,10 @@ export class AdmittedUserStore {
         if (error) {
             this.sentry.captureMessage("failed to remove user", "error", { originalException: error });
             throw error;
+        }
+
+        if (this.userCache[userID]) {
+            delete this.userCache[userID];
         }
     }
 
