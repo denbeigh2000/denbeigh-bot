@@ -1,13 +1,10 @@
 import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, ApplicationCommandOptionType, InteractionResponseType, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
-import { PluginError, SentryReportData } from "@bot/plugin/error";
+
 import { CommandHandler } from "@bot/plugin/command";
+import { NoWorkHandlerError, NoWorkHandlerErrorType } from "./error";
 
 export interface CommandHandlerInputParams {
     mentionUser?: string,
-}
-
-export enum NoWorkHandlerErrorType {
-    MIS_STRUCTURED_COMMAND = "mis_structured_command",
 }
 
 function structureErr(info: string): NoWorkHandlerError {
@@ -17,40 +14,6 @@ function structureErr(info: string): NoWorkHandlerError {
     );
 }
 
-export class NoWorkHandlerError extends PluginError {
-    type: NoWorkHandlerErrorType;
-    data?: any;
-
-    constructor(type: NoWorkHandlerErrorType, data?: any) {
-        super("NoWorkHandlerError");
-
-        this.type = type;
-        this.data = data;
-    }
-
-    toOperatorMessage(): string {
-        let extra: string;
-        switch (this.type) {
-            case NoWorkHandlerErrorType.MIS_STRUCTURED_COMMAND:
-                extra = "mis-structured command" + (this.data
-                    ? ` (${this.data})`
-                    : "");
-        }
-
-        return `error showing /nowork: ${extra}`;
-    }
-
-    toUserMessage(): string {
-        return "Internal error";
-    }
-
-    sentryData(): SentryReportData | null {
-        return {
-            message: this.toOperatorMessage(),
-            level: "warning",
-        };
-    }
-}
 
 export default class NoWorkCommandHandler extends CommandHandler<CommandHandlerInputParams, RESTPostAPIWebhookWithTokenJSONBody> {
     definition: RESTPostAPIChatInputApplicationCommandsJSONBody = {
