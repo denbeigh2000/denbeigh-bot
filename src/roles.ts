@@ -41,6 +41,16 @@ export const ROLE_META = {
     },
 };
 
+export type RoleIDs = { [role in Role]: Snowflake };
+
+export function envToRoleIDs(env: Env): RoleIDs {
+    return {
+        [Role.Moderator]: env.MOD_ROLE,
+        [Role.Member]: env.MEMBER_ROLE,
+        [Role.Guest]: env.GUEST_ROLE,
+    };
+}
+
 export function roleToID(env: Env, role: Role): Snowflake {
     switch (role) {
         case Role.Guest:
@@ -53,6 +63,20 @@ export function roleToID(env: Env, role: Role): Snowflake {
             throw new Error(`no such role: ${role}`);
     }
 };
+
+export function newRoleToID(env: Env, role: Role): Snowflake {
+    switch (role) {
+        case Role.Guest:
+            return env.GUEST_ROLE;
+        case Role.Member:
+            return env.MEMBER_ROLE;
+        case Role.Moderator:
+            return env.MOD_ROLE;
+        default:
+            throw new Error(`no such role: ${role}`);
+    }
+};
+
 
 export function idToRole(env: Env, roleID: Snowflake): Role {
     switch (roleID) {
