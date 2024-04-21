@@ -2,16 +2,14 @@ import {
     APIChatInputApplicationCommandGuildInteraction,
     APIInteractionResponse,
     ApplicationCommandOptionType,
-    InteractionResponseType,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
-    RESTPostAPIWebhookWithTokenJSONBody,
 } from "discord-api-types/v10";
 
 import { BotClient } from "@bot/discord/client";
-import { genericEphemeral, genericError } from "@bot/discord/messages/errors";
 import { Env } from "@bot/env";
-import { idsToRole, Role, roleToID } from "@bot/roles";
+import { envToRoleIDs } from "@bot/roles";
 import { Sentry } from "@bot/sentry";
+import { InvitesHandler } from "@bot/invites/handler";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "invite",
@@ -51,76 +49,18 @@ export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    sentry: Sentry,
+    _sentry: Sentry,
 ): Promise<APIInteractionResponse | null> {
-    return {
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: await inner(client, interaction, env, sentry),
-    };
-}
-
-async function inner(
-    client: BotClient,
-    interaction: APIChatInputApplicationCommandGuildInteraction,
-    env: Env,
-    sentry: Sentry,
-): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
-    /* TODO: Most of this block should be factored out */
-    const { options } = interaction.data;
-    if (!options) {
-        const msg = "No options defined in promote command";
-        sentry.captureMessage(msg, "warning");
-        return genericError(msg);
-    }
-
-    const awarder = interaction.member.user.id;
-    let username: string | null = null;
-    let role: number | null = null;
-    for (const option of options) {
-        if (
-            option.name === "username" &&
-            option.type === ApplicationCommandOptionType.String
-        ) {
-            username = option.value;
-        } else if (
-            option.name === "role" &&
-            option.type === ApplicationCommandOptionType.Integer
-        ) {
-            role = option.value;
-        }
-    }
-
-    if (!username || !role) {
-        const msg = `Missing one of username (${username}) or role id (${role})`;
-        sentry.captureMessage(msg, "warning");
-        return { content: msg, };
-    }
-
-    const userRole = idsToRole(env, interaction.member.roles);
-    if (!userRole) {
-        return { content: "You have no valid roles" };
-    }
-
-    // TODO: does this work as i expect it does??
-    // needs a review and a comment
-    if (userRole !== Role.Moderator && role && userRole <= role) {
-        return genericError("You do not have sufficient privileges to award this role");
-    }
-
-    /* End TODO */
-
-    const roleId = roleToID(env, role)!;
-    await env.OAUTH.put(`preauth:${username}`, role.toString());
-    // TODO: change to newer style with embeds
-    await client.createMessage(env.LOG_CHANNEL, {
-        content: `<@${awarder}> authorised \`${username}\` to join with the <@&${roleId}> role`,
-        allowed_mentions: {
-            users: [awarder],
-        },
+    const handler = new InvitesHandler({
+        discord: client,
+        logChannel: env.LOG_CHANNEL,
+        db: env.OAUTH,
+        roleIDs: envToRoleIDs(env),
     });
 
-    return genericEphemeral([
-        `OK, \`${username}\` can join with the <@&${roleId}> role.`,
-        "Send invite link: https://discord.denb.ee/join",
-    ].join("\n\n"));
+    const inputParams = handler.mapInput(interaction);
+    // TODO: pass ctx through
+    const ctx = null as any as ExecutionContext;
+    const outputData = await handler.handle(ctx, inputParams);
+    return handler.mapOutput(inputParams, outputData);
 }
