@@ -1,19 +1,10 @@
-import {
-    APIChatInputApplicationCommandGuildInteraction,
-    APIInteractionResponse,
-    ApplicationCommandOptionType,
-    InteractionResponseType,
-    MessageFlags,
-    RESTPostAPIChatInputApplicationCommandsJSONBody,
-    RESTPostAPIWebhookWithTokenJSONBody,
-    Snowflake,
-} from "discord-api-types/v10";
-
-import { BotClient } from "@bot/discord/client";
-import { genericError } from "@bot/discord/messages/errors";
+import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, ApplicationCommandOptionType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 import { Env } from "@bot/env";
+import NoWorkCommandHandler from "@bot/nowork";
 import { Sentry } from "@bot/sentry";
+import { BotClient } from "@bot/discord/client";
 
+// TODO: remove this when router is using CommandHandler subclass
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
     name: "nowork",
@@ -29,61 +20,15 @@ export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 };
 
 export async function handler(
-    client: BotClient,
-    interaction: APIChatInputApplicationCommandGuildInteraction,
-    env: Env,
-    sentry: Sentry,
-): Promise<APIInteractionResponse | null> {
-    return {
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: await inner(client, interaction, env, sentry),
-    };
-}
-
-function buildMessage(user: Snowflake | null) {
-    const formattedUser = user
-        ? `<@${user}> `
-        : "";
-    return `${formattedUser}No Discord feedback/feature requests/bug reports in this server.
-
-Official support channels:
-- [User feedback](https://feedback.discord.com)
-- [Submit a bug report](https://dis.gd/bugreport)
-- [Report abuse/violations](https://discord.com/safety/360044103651-reporting-abusive-behavior-to-discord)
-- [Discord Support on Twitter](https://twitter.com/discord_support)
-`;
-}
-
-async function inner(
     _client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     _env: Env,
-    sentry: Sentry,
-): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
-    const { options } = interaction.data;
-    let user: Snowflake | null;
-    if (!options) {
-        user = null;
-    } else if (options.length === 1) {
-        const opt = options[0];
-        if (opt.type !== ApplicationCommandOptionType.User) {
-            const msg = `Bad option type: ${opt.type}`;
-            sentry.captureMessage(msg, "warning");
-            return genericError(msg);
-        }
-
-        user = opt.value;
-    } else {
-        const msg = "Too many options given";
-        sentry.captureMessage(msg, "warning");
-        return genericError(msg);
-    }
-
-    const content = buildMessage(user);
-    const mentions = user ? [user] : [];
-    return {
-        content,
-        allowed_mentions: { users: mentions },
-        flags: MessageFlags.SuppressEmbeds,
-    };
+    _sentry: Sentry,
+): Promise<APIInteractionResponse | null> {
+    const handler = new NoWorkCommandHandler();
+    // TODO: pass down ctx
+    const ctx = null as any as ExecutionContext;
+    const inputParams = handler.mapInput(interaction);
+    const outputData = await handler.handle(ctx, inputParams);
+    return handler.mapOutput(inputParams, outputData);
 }
