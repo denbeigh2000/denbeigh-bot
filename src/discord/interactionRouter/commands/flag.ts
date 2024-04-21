@@ -1,20 +1,15 @@
-import { FlagManager } from "@bot/flag";
-
 import {
     APIApplicationCommandSubcommandOption,
     APIChatInputApplicationCommandGuildInteraction,
     APIInteractionResponse,
     ApplicationCommandOptionType,
-    InteractionResponseType,
     RESTPostAPIChatInputApplicationCommandsJSONBody,
-    RESTPostAPIWebhookWithTokenJSONBody
 } from "discord-api-types/v10";
 
-import { BotClient } from "@bot/discord/client";
-import { genericEphemeral, genericError } from "@bot/discord/messages/errors";
 import { Sentry } from "@bot/sentry";
+import { BotClient } from "@bot/discord/client";
 import { Env } from "@bot/env";
-
+import { FlagCommandHandler } from "@bot/flag/handler";
 
 const setCommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,
@@ -36,6 +31,8 @@ const unsetCommand: APIApplicationCommandSubcommandOption = {
     description: "Remove any flag you have set.",
 }
 
+// NOTE: this declaration will go away when all the commands implement the new
+// standard, and the router uses that type.
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "flag",
     description: "Manage the flag displayed next to your display name.",
@@ -51,64 +48,21 @@ export async function handler(
     env: Env,
     sentry: Sentry,
 ): Promise<APIInteractionResponse | null> {
-    return {
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: await inner(client, interaction, env, sentry),
-    };
-}
 
-async function inner(
-    client: BotClient,
-    interaction: APIChatInputApplicationCommandGuildInteraction,
-    env: Env,
-    sentry: Sentry,
-): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
-    const flagManager = new FlagManager(env.OAUTH_DB, client, env.GUILD_ID, sentry);
-    const userID = interaction.member.user.id;
-    const options = interaction.data.options;
-    if (!options) {
-        const msg = "missing options";
-        sentry.captureMessage(msg, "warning");
-        return genericError(msg);
-    }
+    // NOTE: glue code until we write them all like this, and just make the
+    // router use this type.
+    const handler = new FlagCommandHandler(
+        client,
+        env.OAUTH_DB,
+        env.GUILD_ID,
+        sentry
+    );
 
-    const subc = options[0];
-    if (subc.type !== ApplicationCommandOptionType.Subcommand) {
-        const msg = "1st option not subcommand";
-        sentry.captureMessage(msg, "warning");
-        return genericError(msg);
-    }
+    // TODO: pass ctx everywhere. this isn't used here right now, anyway.
+    const ctx = null as any as ExecutionContext;
 
-    if (subc.name === "unset") {
-        await flagManager.unsetFlag(userID);
-        return genericEphemeral("OK, unset your flag.");
-    }
-
-    if (subc.name !== "set") {
-        const msg = `Invalid option ${subc.name}`;
-        sentry.captureMessage(msg, "warning");
-        return genericError(msg);
-    }
-
-    if (!subc.options) {
-        const msg = "Missing country code";
-        sentry.captureMessage(msg, "warning");
-        return genericError(msg);
-    }
-
-    const setOpt = subc.options[0];
-    if (setOpt.name !== "code") {
-        const msg = `Unexpected sub-option ${setOpt.name}`;
-        sentry.captureMessage(msg, "warning");
-        return genericError(msg);
-    }
-
-    if (setOpt.type !== ApplicationCommandOptionType.String) {
-        const msg = `Unexpected sub-option type ${setOpt.type}`;
-        sentry.captureMessage(msg, "warning");
-        return genericError(msg);
-    }
-
-    await flagManager.setFlag(userID, setOpt.value);
-    return genericEphemeral("Flag updated");
+    const inputParams = handler.mapInput(interaction);
+    await handler.handle(ctx, inputParams);
+    const msg = handler.mapOutput(inputParams);
+    return msg;
 }
