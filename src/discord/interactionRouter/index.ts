@@ -1,9 +1,24 @@
-import { Sentry } from "../../sentry";
+import {
+    APIChatInputApplicationCommandGuildInteraction,
+    APIInteraction,
+    APIInteractionResponse,
+    APIInteractionResponseChannelMessageWithSource,
+    APIMessageComponentGuildInteraction,
+    InteractionResponseType,
+    InteractionType,
+    MessageFlags,
+    RESTPostAPIChatInputApplicationCommandsJSONBody,
+} from "discord-api-types/v10";
+import {
+    isApplicationCommandGuildInteraction,
+    isChatInputApplicationCommandInteraction,
+    isMessageComponentGuildInteraction,
+    isMessageComponentInteraction,
+} from "discord-api-types/utils/v10";
 
-import { APIChatInputApplicationCommandGuildInteraction, APIInteraction, APIInteractionResponse, APIInteractionResponseChannelMessageWithSource, APIMessageComponentGuildInteraction, InteractionResponseType, InteractionType, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
-import { isApplicationCommandGuildInteraction, isChatInputApplicationCommandInteraction, isMessageComponentGuildInteraction, isMessageComponentInteraction } from "discord-api-types/utils/v10";
-import { Env } from "../../env";
-import { BotClient } from "../client/bot";
+import { Sentry } from "@bot/sentry";
+import { Env } from "@bot/env";
+import { BotClient } from "@bot/discord/client/bot";
 import { formatCommandSet } from "./help";
 
 type CommandFn = (c: BotClient, i: APIChatInputApplicationCommandGuildInteraction, e: Env, s: Sentry) => Promise<APIInteractionResponse | null>;

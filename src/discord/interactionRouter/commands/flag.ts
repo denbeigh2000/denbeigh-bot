@@ -1,4 +1,4 @@
-import { FlagManager } from "../../../flag";
+import { FlagManager } from "@bot/flag";
 
 import {
     APIApplicationCommandSubcommandOption,
@@ -9,10 +9,12 @@ import {
     RESTPostAPIChatInputApplicationCommandsJSONBody,
     RESTPostAPIWebhookWithTokenJSONBody
 } from "discord-api-types/v10";
-import { Sentry } from "../../../sentry";
-import { Env } from "../../../env";
-import { BotClient } from "../../client";
-import { genericEphemeral, genericError } from "../../messages/errors";
+
+import { BotClient } from "@bot/discord/client";
+import { genericEphemeral, genericError } from "@bot/discord/messages/errors";
+import { Sentry } from "@bot/sentry";
+import { Env } from "@bot/env";
+
 
 const setCommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,

@@ -1,15 +1,15 @@
 import { RESTJSONErrorCodes } from "discord-api-types/v10";
-import { getAuthToken } from "../auth";
-import { TokenResponse } from "../auth/authManager";
 
-import { BotClient } from "../discord/client";
-import { authorisePendingUser } from "../discord/messages/join";
-import { Env } from "../env";
-import { roleToID } from "../roles";
-import { Sentry } from "../sentry";
-import { authManagerFromEnv, formatUser } from "../util";
-import { returnStatus } from "../util/http";
-import { StateStore } from "../admission/statestore";
+import { StateStore } from "@bot/admission/statestore";
+import { getAuthToken } from "@bot/auth";
+import { TokenResponse } from "@bot/auth/authManager";
+import { BotClient } from "@bot/discord/client";
+import { authorisePendingUser } from "@bot/discord/messages/join";
+import { Env } from "@bot/env";
+import { roleToID } from "@bot/roles";
+import { Sentry } from "@bot/sentry";
+import { authManagerFromEnv, formatUser } from "@bot/util";
+import { returnStatus } from "@bot/util/http";
 
 export async function handler(
     req: Request,

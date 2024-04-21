@@ -1,7 +1,7 @@
 // https://discord.com/developers/docs/reference#image-formatting-cdn-endpoints
 
 import { APIGuildMember, APIUser, Snowflake } from "discord-api-types/v10";
-import { formatUser } from "../util";
+import { formatUser } from "@bot/util";
 
 const IMAGE_BASE = "https://cdn.discordapp.com";
 const DISCORD_EPOCH = 1420070400000

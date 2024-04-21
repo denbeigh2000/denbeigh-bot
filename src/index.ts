@@ -1,7 +1,7 @@
-import { Env } from "./env";
-import { router } from "./routes";
-import { Sentry } from "./sentry";
-import { returnStatus } from "./util/http";
+import { Env } from "@bot/env";
+import { router } from "@bot/routes";
+import { Sentry } from "@bot/sentry";
+import { returnStatus } from "@bot/util/http";
 
 export default {
     async fetch(

@@ -1,9 +1,17 @@
-import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, ApplicationCommandOptionType, InteractionResponseType, MessageFlags, RESTPostAPIChatInputApplicationCommandsJSONBody, RESTPostAPIWebhookWithTokenJSONBody, Snowflake } from "discord-api-types/v10";
-import { Env } from "../../../env";
-import { idsToRole, Role, roleToID } from "../../../roles";
-import { Sentry } from "../../../sentry";
-import { BotClient } from "../../client";
-import { genericEphemeral, genericError } from "../../messages/errors";
+import {
+    APIChatInputApplicationCommandGuildInteraction,
+    APIInteractionResponse,
+    ApplicationCommandOptionType,
+    InteractionResponseType,
+    RESTPostAPIChatInputApplicationCommandsJSONBody,
+    RESTPostAPIWebhookWithTokenJSONBody,
+} from "discord-api-types/v10";
+
+import { BotClient } from "@bot/discord/client";
+import { genericEphemeral, genericError } from "@bot/discord/messages/errors";
+import { Env } from "@bot/env";
+import { idsToRole, Role, roleToID } from "@bot/roles";
+import { Sentry } from "@bot/sentry";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "invite",

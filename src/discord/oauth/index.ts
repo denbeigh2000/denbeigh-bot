@@ -1,7 +1,7 @@
 import { OAuth2Scopes } from "discord-api-types/payloads/v10";
 import { Routes } from "discord-api-types/v10";
 
-import { Sentry } from "../../sentry";
+import { Sentry } from "@bot/sentry";
 
 const API_BASE_URL = "https://discordapp.com/api"
 

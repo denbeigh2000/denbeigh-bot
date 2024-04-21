@@ -1,9 +1,9 @@
 import { serialize as serializeCookie } from "cookie";
-import { AUTH_COOKIE_NAME } from "../auth";
-import { Env } from "../env";
-import { Sentry } from "../sentry";
-import { authManagerFromEnv } from "../util";
-import { DEFAULT_HEADERS, respond400 } from "../util/http";
+import { AUTH_COOKIE_NAME } from "@bot/auth";
+import { Env } from "@bot/env";
+import { Sentry } from "@bot/sentry";
+import { authManagerFromEnv } from "@bot/util";
+import { DEFAULT_HEADERS, respond400 } from "@bot/util/http";
 
 export async function handler(req: Request,
     env: Env,

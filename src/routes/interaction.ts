@@ -1,9 +1,9 @@
-import verify from "../discord/verify";
-import { Env } from "../env";
-import { Sentry } from "../sentry";
-import { DEFAULT_HEADERS, returnJSON, returnStatus } from "../util/http";
+import verify from "@bot/discord/verify";
+import { Env } from "@bot/env";
+import { Sentry } from "@bot/sentry";
+import { DEFAULT_HEADERS, returnJSON, returnStatus } from "@bot/util/http";
 
-import { getRouter } from "../discord/interactionRouter/registry";
+import { getRouter } from "@bot/discord/interactionRouter/registry";
 
 export async function handler(
     request: Request,

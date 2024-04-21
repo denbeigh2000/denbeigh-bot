@@ -1,5 +1,5 @@
-import { Env } from "../../env";
-import { Sentry } from "../../sentry";
+import { Env } from "@bot/env";
+import { Sentry } from "@bot/sentry";
 
 import { InteractionRouter } from ".";
 import { handler as pingHandler, command as pingDesc } from "./commands/ping";

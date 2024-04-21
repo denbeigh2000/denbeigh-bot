@@ -4,10 +4,11 @@ import {
     InteractionResponseType,
     MessageFlags,
     RESTPostAPIChatInputApplicationCommandsJSONBody
+
 } from "discord-api-types/v10";
-import { Env } from "../../../env";
-import { Sentry } from "../../../sentry";
-import { BotClient } from "../../client/bot";
+import { BotClient } from "@bot/discord/client/bot";
+import { Env } from "@bot/env";
+import { Sentry } from "@bot/sentry";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: "ping",

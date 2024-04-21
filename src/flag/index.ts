@@ -1,8 +1,9 @@
 import { Snowflake } from "discord-api-types/globals";
 import i18n from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
-import { BotClient } from "../discord/client";
-import { Sentry } from "../sentry";
+
+import { BotClient } from "@bot/discord/client";
+import { Sentry } from "@bot/sentry";
 import { FlagRole, FlagRoleStore } from "./store";
 
 const LETTER_OFFSET = 127462;

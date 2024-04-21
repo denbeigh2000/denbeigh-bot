@@ -1,7 +1,7 @@
 import { APIUser } from "discord-api-types/v10";
-import { AuthManager } from "../auth/authManager";
-import { Env, importJwtKey, importOauthKey } from "../env";
-import { Sentry } from "../sentry";
+import { AuthManager } from "@bot/auth/authManager";
+import { Env, importJwtKey, importOauthKey } from "@bot/env";
+import { Sentry } from "@bot/sentry";
 
 export async function sha256sum(input: string): Promise<string> {
     // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#converting_a_digest_to_a_hex_string

@@ -1,9 +1,9 @@
 import { APIApplicationCommandSubcommandOption, ApplicationCommandOptionType, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
 
-import { GroupManager } from "../../../../group/manager";
-import { genericEphemeral, genericError } from "../../../../discord/messages/errors";
-import { Env } from "../../../../env";
-import { idsToRole, Role } from "../../../../roles";
+import { GroupManager } from "@bot/group/manager";
+import { genericEphemeral, genericError } from "@bot/discord/messages/errors";
+import { Env } from "@bot/env";
+import { idsToRole, Role } from "@bot/roles";
 
 export const subcommand: APIApplicationCommandSubcommandOption = {
     type: ApplicationCommandOptionType.Subcommand,

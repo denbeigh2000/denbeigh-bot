@@ -5,15 +5,15 @@ import {
     ComponentType,
 } from "discord-api-types/payloads/v10";
 
-import { BotClient } from "../../../discord/client";
-import { genericEphemeral } from "../../../discord/messages/errors";
-import { admittedUser, bannedUser } from "../../../discord/messages/log";
-import { Env } from "../../../env";
-import { Sentry } from "../../../sentry";
+import { BotClient } from "@bot/discord/client";
+import { genericEphemeral } from "@bot/discord/messages/errors";
+import { admittedUser, bannedUser } from "@bot/discord/messages/log";
+import { Env } from "@bot/env";
+import { Sentry } from "@bot/sentry";
 import { Snowflake } from "discord-api-types/globals";
-import { Results, StateStore } from "../../../admission/statestore";
-import { auxRoleToID, idsToRole, ID_TO_AUX_ROLE, ID_TO_ROLE, roleToID } from "../../../roles";
-import { getMultiUserId, MultiUser } from "../../../discord";
+import { Results, StateStore } from "@bot/admission/statestore";
+import { auxRoleToID, idsToRole, ID_TO_AUX_ROLE, ID_TO_ROLE, roleToID } from "@bot/roles";
+import { getMultiUserId, MultiUser } from "@bot/discord";
 
 async function handleAccept(env: Env, now: Date, admitted: APIGuildMember, admitter: APIGuildMember, state: Results, botClient: BotClient): Promise<boolean> {
     const { role, auxRoles } = state;

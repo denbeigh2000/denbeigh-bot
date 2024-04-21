@@ -1,5 +1,5 @@
 import { Snowflake } from "discord-api-types/globals";
-import { Sentry } from "../sentry";
+import { Sentry } from "@bot/sentry";
 
 export interface FlagRole {
     roleID: Snowflake,

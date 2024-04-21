@@ -1,5 +1,5 @@
 import { APIRole, APIGuildMember } from "discord-api-types/v10";
-import { BotClient } from "../discord/client/bot";
+import { BotClient } from "@bot/discord/client/bot";
 
 const PREFIX = "group-";
 

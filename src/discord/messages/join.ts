@@ -8,10 +8,10 @@ import {
     Snowflake,
 } from "discord-api-types/v10";
 
-import { avatarURL, COLOURS, convertSnowflakeToDate } from "..";
-import { Env } from "../../env";
-import { AUX_ROLE_META, RoleMeta, ROLE_META } from "../../roles";
-import { formatUser } from "../../util";
+import { Env } from "@bot/env";
+import { avatarURL, COLOURS, convertSnowflakeToDate } from "@bot/discord";
+import { AUX_ROLE_META, RoleMeta, ROLE_META } from "@bot/roles";
+import { formatUser } from "@bot/util";
 
 function renderRole(role: RoleMeta): APISelectMenuOption {
     return {

@@ -1,6 +1,6 @@
 import { APIUser, RESTGetAPICurrentUserResult, RESTJSONErrorCodes, Routes } from "discord-api-types/v10";
 
-import { Sentry } from "../../sentry";
+import { Sentry } from "@bot/sentry";
 import { Client } from "./base";
 
 export class UserClient extends Client {

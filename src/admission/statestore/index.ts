@@ -1,7 +1,7 @@
 import { Snowflake } from "discord-api-types/globals"
 
-import { AuxRole, AUX_ROLE_META, ID_TO_AUX_ROLE, ID_TO_ROLE, Role, ROLE_META } from "../../roles";
-import { Sentry } from "../../sentry";
+import { AuxRole, AUX_ROLE_META, ID_TO_AUX_ROLE, ID_TO_ROLE, Role, ROLE_META } from "@bot/roles";
+import { Sentry } from "@bot/sentry";
 import { deleteState, FetchPendingResult, fetchPendingUser, insertActionMessage, selectState, setAuxRoles, setRole, StateResult } from "./queries";
 
 export interface Results {

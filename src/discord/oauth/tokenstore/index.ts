@@ -1,6 +1,6 @@
 import { Snowflake } from "discord-api-types/v10";
 
-import { Sentry } from "../../../sentry";
+import { Sentry } from "@bot/sentry";
 import { getOne, GetResult, replaceOne, upsertOne, UpsertResult } from "./queries";
 
 export interface OAuthRecord {

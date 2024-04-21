@@ -1,9 +1,9 @@
 import { APIUser } from "discord-api-types/payloads/v10/user";
-import { UserClient } from "../discord/client";
-import { OAuthClient as DiscordOAuthClient } from "../discord/oauth";
-import { StateStore } from "../discord/oauth/statestore";
-import { TokenStore } from "../discord/oauth/tokenstore";
-import { Sentry } from "../sentry";
+import { UserClient } from "@bot/discord/client";
+import { OAuthClient as DiscordOAuthClient } from "@bot/discord/oauth";
+import { StateStore } from "@bot/discord/oauth/statestore";
+import { TokenStore } from "@bot/discord/oauth/tokenstore";
+import { Sentry } from "@bot/sentry";
 import { SessionSigner } from "./sessionSigner";
 
 export interface OAuthExchange {

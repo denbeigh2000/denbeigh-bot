@@ -1,9 +1,9 @@
 import { APIGuildMember, RESTPostAPIChannelMessageJSONBody } from "discord-api-types/v10";
-import { avatarURL, COLOURS, convertSnowflakeToDate, formatMultiUser, getMultiUserAvatar, getMultiUserId, GuildMemberUser, NonGuildMemberUser, SnowflakeUser } from "..";
 
-import { Env, } from "../../env";
-import { AuxRole, AUX_ROLE_META, Role, RoleMeta, ROLE_META } from "../../roles";
-import { formatUser } from "../../util";
+import { Env } from "@bot/env";
+import { avatarURL, COLOURS, convertSnowflakeToDate, formatMultiUser, getMultiUserAvatar, getMultiUserId, GuildMemberUser, NonGuildMemberUser, SnowflakeUser } from "@bot/discord";
+import { AuxRole, AUX_ROLE_META, Role, RoleMeta, ROLE_META } from "@bot/roles";
+import { formatUser } from "@bot/util";
 
 function renderRoleList(meta: RoleMeta): string {
     return `- ${meta.emoji} ${meta.friendlyName}`;

@@ -1,8 +1,8 @@
 import { Router, IRequest } from "itty-router";
 
-import { Env } from "../env";
-import { Sentry } from "../sentry";
-import { respondNotFound } from "../util/http";
+import { Env } from "@bot/env";
+import { Sentry } from "@bot/sentry";
+import { respondNotFound } from "@bot/util/http";
 
 import { handler as handleJoin } from "./join";
 import { handler as handleRedirect } from "./redirect";

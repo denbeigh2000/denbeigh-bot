@@ -1,10 +1,11 @@
 import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, ApplicationCommandOptionType, InteractionResponseType, RESTPostAPIChatInputApplicationCommandsJSONBody, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
-import { Env } from "../../../env";
-import { idsToRole, Role, roleToID } from "../../../roles";
-import { Sentry } from "../../../sentry";
-import { BotClient } from "../../client/bot";
-import { genericEphemeral, genericError } from "../../messages/errors";
-import { changedRole } from "../../messages/log";
+
+import { BotClient } from "@bot/discord/client/bot";
+import { genericEphemeral, genericError } from "@bot/discord/messages/errors";
+import { changedRole } from "@bot/discord/messages/log";
+import { Env } from "@bot/env";
+import { idsToRole, Role, roleToID } from "@bot/roles";
+import { Sentry } from "@bot/sentry";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {

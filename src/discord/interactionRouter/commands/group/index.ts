@@ -3,19 +3,19 @@ import {
     ApplicationCommandOptionType,
 } from "discord-api-types/payloads/v10";
 import { RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/rest/v10/webhook";
+import { APIInteractionResponse, InteractionResponseType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
 
-import { BotClient } from "../../../../discord/client";
-import { Env } from "../../../../env";
-import { Sentry } from "../../../../sentry";
+import { BotClient } from "@bot/discord/client";
+import { genericError } from "@bot/discord/messages/errors";
+import { Env } from "@bot/env";
+import { GroupManager } from "@bot/group/manager";
+import { Sentry } from "@bot/sentry";
 
-import { GroupManager } from "../../../../group/manager";
 import { handler as createHandler, subcommand as createSubcommand } from "./create";
 import { handler as deleteHandler, subcommand as deleteSubcommand } from "./delete";
 import { handler as leaveHandler, subcommand as leaveSubcommand } from "./leave";
 import { handler as listHandler, subcommand as listSubcommand } from "./list";
 import { handler as joinHandler, subcommand as joinSubcommand } from "./join";
-import { APIInteractionResponse, InteractionResponseType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
-import { genericError } from "../../../../discord/messages/errors";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {

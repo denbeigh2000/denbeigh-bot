@@ -1,10 +1,10 @@
-import { getAuthToken } from "../auth";
-import { BotClient } from "../discord/client";
-import { getRouter } from "../discord/interactionRouter/registry";
-import { Env } from "../env";
-import { Sentry } from "../sentry";
-import { authManagerFromEnv } from "../util";
-import { DEFAULT_HEADERS, returnStatus } from "../util/http";
+import { getAuthToken } from "@bot/auth";
+import { BotClient } from "@bot/discord/client";
+import { getRouter } from "@bot/discord/interactionRouter/registry";
+import { Env } from "@bot/env";
+import { Sentry } from "@bot/sentry";
+import { authManagerFromEnv } from "@bot/util";
+import { DEFAULT_HEADERS, returnStatus } from "@bot/util/http";
 
 export async function handler(
     req: Request,
