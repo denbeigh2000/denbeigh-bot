@@ -1,7 +1,16 @@
 import { CommandHandler } from "@bot/plugin/command";
-import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, InteractionResponseType, MessageFlags, MessageType } from "discord-api-types/v10";
+import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, InteractionResponseType, MessageFlags, MessageType, RESTPostAPIChatInputApplicationCommandsJSONBody } from "discord-api-types/v10";
+
+const definition: RESTPostAPIChatInputApplicationCommandsJSONBody = {
+    name: "ping",
+    description: "Do the ping thing.",
+};
 
 export class PingCommandHandler extends CommandHandler<null, string> {
+    constructor() {
+        super(definition);
+    }
+
     mapInput(_interaction: APIChatInputApplicationCommandGuildInteraction): null {
         return null;
     }

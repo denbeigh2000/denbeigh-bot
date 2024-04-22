@@ -8,6 +8,10 @@ import {
 export abstract class CommandHandler<Input, Output> {
     definition: RESTPostAPIChatInputApplicationCommandsJSONBody;
 
+    constructor(definition: RESTPostAPIChatInputApplicationCommandsJSONBody) {
+        this.definition = definition;
+    }
+
     // Map the relevant information out of the command structure
     abstract mapInput(interaction: APIChatInputApplicationCommandGuildInteraction): Input;
     // Map the output from the input/output of the operation into a response

@@ -34,6 +34,40 @@ export interface InvitesHandlerParams {
     roleIDs: RoleIDs,
 }
 
+const definition: RESTPostAPIChatInputApplicationCommandsJSONBody = {
+    name: "invite",
+    description: "Pre-authorise a new user (admission rules apply).",
+    options: [
+        {
+            type: ApplicationCommandOptionType.String,
+            name: "username",
+            description:
+                "Username of the user to invite",
+            required: true,
+        },
+        {
+            type: ApplicationCommandOptionType.Integer,
+            name: "role",
+            description: "Role to give the new user",
+            choices: [
+                {
+                    name: "Guest",
+                    value: 10,
+                },
+                {
+                    name: "Member",
+                    value: 20,
+                },
+                {
+                    name: "Moderator",
+                    value: 30,
+                },
+            ],
+            required: true,
+        },
+    ],
+};
+
 export class InvitesHandler extends CommandHandler<InviteRequest, null> {
     discord: BotClient;
     logChannel: Snowflake;
@@ -41,7 +75,7 @@ export class InvitesHandler extends CommandHandler<InviteRequest, null> {
     roleIDs: RoleIDs;
 
     constructor({ discord, logChannel, db, roleIDs }: InvitesHandlerParams) {
-        super();
+        super(definition);
 
         this.discord = discord;
         this.logChannel = logChannel;

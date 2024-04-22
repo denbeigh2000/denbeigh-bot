@@ -14,20 +14,24 @@ function structureErr(info: string): NoWorkHandlerError {
     );
 }
 
+const definition: RESTPostAPIChatInputApplicationCommandsJSONBody = {
+    name: "nowork",
+    description: "Remind the chat of the no-work policy.",
+    options: [
+        {
+            type: ApplicationCommandOptionType.User,
+            name: "user",
+            description: "User to direct reminder to",
+            required: false,
+        },
+    ],
+};
+
 
 export default class NoWorkCommandHandler extends CommandHandler<CommandHandlerInputParams, RESTPostAPIWebhookWithTokenJSONBody> {
-    definition: RESTPostAPIChatInputApplicationCommandsJSONBody = {
-        name: "nowork",
-        description: "Remind the chat of the no-work policy.",
-        options: [
-            {
-                type: ApplicationCommandOptionType.User,
-                name: "user",
-                description: "User to direct reminder to",
-                required: false,
-            },
-        ],
-    };
+    constructor() {
+        super(definition);
+    }
 
     mapInput(interaction: APIChatInputApplicationCommandGuildInteraction): CommandHandlerInputParams {
         const { options } = interaction.data;

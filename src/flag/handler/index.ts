@@ -40,37 +40,38 @@ function isFlagUnsetRequest(req: FlagRequest): req is FlagUnsetRequest {
     return req.type === FlagRequestType.UNSET;
 }
 
-export class FlagCommandHandler extends CommandHandler<FlagRequest, null> {
-    definition: RESTPostAPIChatInputApplicationCommandsJSONBody = {
-        name: "flag",
-        description: "Manage the flag displayed next to your display name.",
-        options: [
-            {
-                type: ApplicationCommandOptionType.Subcommand,
-                name: "set",
-                description: "Pick a flag to show.",
-                options: [
-                    {
-                        type: ApplicationCommandOptionType.String,
-                        name: "code",
-                        description: "ISO-3166-1 Country Code",
-                        required: true,
-                    },
-                ],
-            },
-            {
-                type: ApplicationCommandOptionType.Subcommand,
-                name: "unset",
-                description: "Remove any flag you have set.",
-            },
-        ],
-    };
+const definition: RESTPostAPIChatInputApplicationCommandsJSONBody = {
+    name: "flag",
+    description: "Manage the flag displayed next to your display name.",
+    options: [
+        {
+            type: ApplicationCommandOptionType.Subcommand,
+            name: "set",
+            description: "Pick a flag to show.",
+            options: [
+                {
+                    type: ApplicationCommandOptionType.String,
+                    name: "code",
+                    description: "ISO-3166-1 Country Code",
+                    required: true,
+                },
+            ],
+        },
+        {
+            type: ApplicationCommandOptionType.Subcommand,
+            name: "unset",
+            description: "Remove any flag you have set.",
+        },
+    ],
+};
 
+
+export class FlagCommandHandler extends CommandHandler<FlagRequest, null> {
     client: BotClient;
     manager: FlagManager;
 
     constructor(client: BotClient, db: D1Database, guildID: Snowflake, sentry: Sentry) {
-        super()
+        super(definition);
 
         this.client = client;
         this.manager = new FlagManager(db, client, guildID, sentry);
