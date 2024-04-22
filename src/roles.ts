@@ -41,6 +41,17 @@ export const ROLE_META = {
     },
 };
 
+export type IDToRole = { [id: Snowflake]: Role };
+
+export function invertRoleIDs(ids: RoleIDs): IDToRole {
+    return Object.entries(ids).reduce<{ [id: Snowflake]: Role }>((ret, entry) => {
+        const [key, value] = entry;
+        // TODO: verify this isn't bogus, tsc thinks key is a string
+        ret[value] = key as any as Role;
+        return ret;
+    }, {});
+}
+
 export type RoleIDs = { [role in Role]: Snowflake };
 
 export function envToRoleIDs(env: Env): RoleIDs {

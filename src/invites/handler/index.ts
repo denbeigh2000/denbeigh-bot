@@ -10,7 +10,7 @@ import {
 } from "discord-api-types/v10";
 
 import { CommandHandler } from "@bot/plugin/command";
-import { Role, RoleIDs } from "@bot/roles";
+import { invertRoleIDs, Role, RoleIDs } from "@bot/roles";
 import { InviteHandlerError, InviteHandlerErrorType } from "./error";
 import { BotClient } from "@bot/discord/client";
 
@@ -129,12 +129,7 @@ Send them this invite link: https://discord.denb.ee/join`;
     }
 
     async handle(_ctx: ExecutionContext, { inviter, invitee, desiredRole }: InviteRequest): Promise<null> {
-        const idsToRoles = Object.entries(this.roleIDs).reduce<{ [id: Snowflake]: Role }>((ret, entry) => {
-            const [key, value] = entry;
-            // TODO: verify this isn't bogus, tsc thinks key is a string
-            ret[value] = key as any as Role;
-            return ret;
-        }, {});
+        const idsToRoles = invertRoleIDs(this.roleIDs);
 
         // TODO: privilege confirmation use the DB instead of discord roles
         const userRoleID = inviter.roles.find(id => idsToRoles[id]);
