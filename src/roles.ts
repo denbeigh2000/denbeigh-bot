@@ -52,6 +52,15 @@ export function invertRoleIDs(ids: RoleIDs): IDToRole {
     }, {});
 }
 
+export function findRole(ids: IDToRole, roles: Snowflake[]): Role | null {
+    const roleID = roles.find(r => ids[r]);
+    if (!roleID) {
+        return null;
+    }
+
+    return ids[roleID];
+}
+
 export type RoleIDs = { [role in Role]: Snowflake };
 
 export function envToRoleIDs(env: Env): RoleIDs {
