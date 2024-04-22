@@ -1,11 +1,15 @@
-import { APIChatInputApplicationCommandGuildInteraction, APIInteractionResponse, ApplicationCommandOptionType, InteractionResponseType, RESTPostAPIChatInputApplicationCommandsJSONBody, RESTPostAPIWebhookWithTokenJSONBody } from "discord-api-types/v10";
+import {
+    APIChatInputApplicationCommandGuildInteraction,
+    APIInteractionResponse,
+    ApplicationCommandOptionType,
+    RESTPostAPIChatInputApplicationCommandsJSONBody,
+} from "discord-api-types/v10";
 
 import { BotClient } from "@bot/discord/client/bot";
-import { genericEphemeral, genericError } from "@bot/discord/messages/errors";
-import { changedRole } from "@bot/discord/messages/log";
 import { Env } from "@bot/env";
-import { idsToRole, Role, roleToID } from "@bot/roles";
+import { envToRoleIDs } from "@bot/roles";
 import { Sentry } from "@bot/sentry";
+import { PromoteHandler } from "@bot/promote/handler";
 
 export const command: RESTPostAPIChatInputApplicationCommandsJSONBody =
 {
@@ -45,84 +49,19 @@ export async function handler(
     client: BotClient,
     interaction: APIChatInputApplicationCommandGuildInteraction,
     env: Env,
-    sentry: Sentry,
+    _sentry: Sentry,
 ): Promise<APIInteractionResponse | null> {
-    return {
-        type: InteractionResponseType.ChannelMessageWithSource,
-        data: await inner(client, interaction, env, sentry),
-    };
-}
+    const handler = new PromoteHandler({
+        client,
+        denbeighUserID: env.DENBEIGH_USER,
+        guildID: env.GUILD_ID,
+        logChannelID: env.LOG_CHANNEL,
+        roleIDs: envToRoleIDs(env),
+    });
 
-async function inner(
-    client: BotClient,
-    interaction: APIChatInputApplicationCommandGuildInteraction,
-    env: Env,
-    sentry: Sentry
-): Promise<RESTPostAPIWebhookWithTokenJSONBody> {
-    const now = new Date();
-
-    const { options } = interaction.data;
-    if (!options) {
-        const msg = "No options defined in promote command";
-        sentry.captureMessage(msg, "warning");
-        return genericEphemeral(msg);
-    }
-
-    const changer = interaction.member;
-    let role: number | null = null;
-    let changeeUserId: string | null = null;
-    for (const option of options) {
-        if (
-            option.name === "user" &&
-            option.type === ApplicationCommandOptionType.User
-        ) {
-            changeeUserId = option.value;
-        } else if (
-            option.name === "role" &&
-            option.type === ApplicationCommandOptionType.Integer
-        ) {
-            role = option.value;
-        }
-    }
-
-    if (!changeeUserId || !role) {
-        const msg = `Missing one of user id (${changeeUserId}) or role id (${role})`;
-        sentry.captureMessage(msg, "warning");
-        return genericEphemeral(msg);
-    }
-
-    // Assuming user is still in the guild, because surely the call above would
-    // have failed if they had left...
-    const changee = (await client.getGuildMember(env.GUILD_ID, changeeUserId));
-    if (!changee) {
-        return genericError(`<@${changeeUserId}> user no longer seems to be in the server?`);
-    }
-
-    const oldRole = idsToRole(env, changee.roles) || 0;
-    const changerRole = idsToRole(env, interaction.member.roles);
-    if (!changerRole) {
-        return genericError("You have no valid roles");
-    }
-    if (changer.user.id !== env.DENBEIGH_USER && changerRole !== Role.Moderator) {
-        return genericError("You must be a moderator to change roles.");
-    }
-    if (changer.user.id !== env.DENBEIGH_USER && changerRole <= role) {
-        return genericError("You cannot promote somebody to the same level as/above yourself");
-    }
-    if (changer.user.id !== env.DENBEIGH_USER && changerRole <= oldRole) {
-        return genericError("To update the roles of somebody else, you must be of a higher role than them.");
-    }
-
-    const roleId = roleToID(env, role)!;
-    await client.setManagedRole(
-        interaction.guild_id!,
-        [env.MOD_ROLE, env.MEMBER_ROLE, env.GUEST_ROLE],
-        changeeUserId,
-        roleId
-    );
-
-    const msg = changedRole(env.MOD_ROLE, changer, changee, now, role);
-    await client.createMessage(env.LOG_CHANNEL, msg);
-
-    return genericEphemeral(`OK, awarded <@${changeeUserId}> the <@&${roleId}> role.`);
+    // TODO: pass ctx through
+    const ctx = null as any as ExecutionContext;
+    const inputParams = handler.mapInput(interaction);
+    const outputData = await handler.handle(ctx, inputParams);
+    return handler.mapOutput(inputParams, outputData);
 }
