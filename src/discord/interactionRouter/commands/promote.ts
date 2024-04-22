@@ -121,7 +121,7 @@ async function inner(
         roleId
     );
 
-    const msg = changedRole(env, changer, changee, now, role);
+    const msg = changedRole(env.MOD_ROLE, changer, changee, now, role);
     await client.createMessage(env.LOG_CHANNEL, msg);
 
     return genericEphemeral(`OK, awarded <@${changeeUserId}> the <@&${roleId}> role.`);

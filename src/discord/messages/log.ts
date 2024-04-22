@@ -1,6 +1,5 @@
-import { APIGuildMember, RESTPostAPIChannelMessageJSONBody } from "discord-api-types/v10";
+import { APIGuildMember, RESTPostAPIChannelMessageJSONBody, Snowflake } from "discord-api-types/v10";
 
-import { Env } from "@bot/env";
 import { avatarURL, COLOURS, convertSnowflakeToDate, formatMultiUser, getMultiUserAvatar, getMultiUserId, GuildMemberUser, NonGuildMemberUser, SnowflakeUser } from "@bot/discord";
 import { AuxRole, AUX_ROLE_META, Role, RoleMeta, ROLE_META } from "@bot/roles";
 import { formatUser } from "@bot/util";
@@ -18,7 +17,7 @@ function toEpoch(d: Date): number {
 }
 
 export function bannedUser(
-    env: Env,
+    modRole: Snowflake,
     banner: APIGuildMember,
     bannee: GuildMemberUser | NonGuildMemberUser | SnowflakeUser,
     bannedAt: Date,
@@ -37,7 +36,7 @@ export function bannedUser(
 
 
     return {
-        content: `<@&${env.MOD_ROLE}>`,
+        content: `<@&${modRole}>`,
         embeds: [
             {
                 title: "User banned",
@@ -66,14 +65,14 @@ export function bannedUser(
             }
         ],
         allowed_mentions: {
-            roles: [env.MOD_ROLE],
+            roles: [modRole],
             users: [bannerID],
         },
     };
 }
 
 export function admittedUser(
-    env: Env,
+    modRole: Snowflake,
     admitter: APIGuildMember,
     admittee: APIGuildMember,
     admittedAt: Date,
@@ -94,7 +93,7 @@ export function admittedUser(
         width: 0
     } : undefined;
     return {
-        content: `<@&${env.MOD_ROLE}>`,
+        content: `<@&${modRole}>`,
         embeds: [
             {
                 title: "User admitted",
@@ -127,14 +126,14 @@ export function admittedUser(
             }
         ],
         allowed_mentions: {
-            roles: [env.MOD_ROLE],
+            roles: [modRole],
             users: [admitteeID, admitterID],
         },
     };
 }
 
 export function changedRole(
-    env: Env,
+    modRole: Snowflake,
     actor: APIGuildMember,
     target: APIGuildMember,
     changedAt: Date,
@@ -155,7 +154,7 @@ export function changedRole(
     // Use either the user's accent colour, or blurple
     const colour = targetUser.accent_color || COLOURS.BLURPLE;
     return {
-        content: `<@&${env.MOD_ROLE}>`,
+        content: `<@&${modRole}>`,
         embeds: [
             {
                 title: "User role changed",
@@ -184,7 +183,7 @@ export function changedRole(
             }
         ],
         allowed_mentions: {
-            roles: [env.MOD_ROLE],
+            roles: [modRole],
             users: [targetUser.id, actorID],
         },
     };

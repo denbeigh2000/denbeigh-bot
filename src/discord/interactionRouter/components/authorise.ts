@@ -23,7 +23,7 @@ async function handleAccept(env: Env, now: Date, admitted: APIGuildMember, admit
         await botClient.addRole(env.GUILD_ID, admitted.user!.id, role);
     }
 
-    const msg = admittedUser(env, admitter, admitted, now, role, auxRoles);
+    const msg = admittedUser(env.MOD_ROLE, admitter, admitted, now, role, auxRoles);
     await botClient.createMessage(env.LOG_CHANNEL, msg);
 
     return true;
@@ -31,7 +31,7 @@ async function handleAccept(env: Env, now: Date, admitted: APIGuildMember, admit
 
 async function handleBan(env: Env, now: Date, banned: MultiUser, banner: APIGuildMember, botClient: BotClient): Promise<boolean> {
     await botClient.banUser(env.GUILD_ID, getMultiUserId(banned));
-    const msg = bannedUser(env, banner, banned!, now);
+    const msg = bannedUser(env.MOD_ROLE, banner, banned!, now);
     await botClient.createMessage(env.LOG_CHANNEL, msg);
 
     return true;
