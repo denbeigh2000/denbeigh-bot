@@ -48,7 +48,7 @@ function randomColour(): number {
     return ROLE_COLOURS[idx];
 }
 
-class Group {
+export class Group {
     name: string;
     roleId: string;
 
