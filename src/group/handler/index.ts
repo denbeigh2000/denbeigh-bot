@@ -1,11 +1,12 @@
-import { CommandHandler } from "@bot/plugin/command";
 import { APIChatInputApplicationCommandGuildInteraction, APIGuildMember, APIInteractionResponse, ApplicationCommandOptionType, InteractionResponseType, MessageFlags, Snowflake } from "discord-api-types/v10";
-import { GroupManager } from "../manager";
 
 import { command } from "@bot/discord/interactionRouter/commands/group/index";
 import { BotClient } from "@bot/discord/client";
-import { Group } from "@bot/group/manager";
+import { Group, GroupManager } from "@bot/group/manager";
+import { invertRoleIDs, RoleIDs, findRole } from "@bot/roles";
+import { CommandHandler } from "@bot/plugin/command";
 import { GroupCommandHandlerError, GroupCommandHandlerErrorType } from "./error";
+import { canManageGroup } from "@bot/permissions";
 
 export enum GroupRequestType {
     LIST = "list",
@@ -57,17 +58,29 @@ export function isGroupDelete(req: GroupRequest): req is GroupDeleteRequest {
     return req.type === GroupRequestType.DELETE && typeof req.name === "string";
 }
 
+export interface GroupCreateRequest extends GroupRequest {
+    type: GroupRequestType.CREATE,
+    name: string,
+}
+
+export function isGroupCreate(req: GroupRequest): req is GroupDeleteRequest {
+    return req.type === GroupRequestType.CREATE && typeof req.name === "string";
+}
+
 export interface GroupResponse {
     groups?: Group[],
     group?: Group,
+    alreadyExists?: boolean,
 }
 
 export class GroupCommandHandler extends CommandHandler<GroupRequest, GroupResponse> {
     manager: GroupManager;
+    roleIDs: RoleIDs;
 
-    constructor(client: BotClient, guildID: Snowflake) {
+    constructor(client: BotClient, guildID: Snowflake, roleIDs: RoleIDs) {
         super(command);
         this.manager = new GroupManager(client, guildID);
+        this.roleIDs = roleIDs;
     }
 
     mapInput(interaction: APIChatInputApplicationCommandGuildInteraction): GroupRequest {
@@ -154,6 +167,11 @@ export class GroupCommandHandler extends CommandHandler<GroupRequest, GroupRespo
             content = `Added you to <@&${output.group!}>`;
         } else if (isGroupLeave(input)) {
             content = `Removed you from <@&${output.group!}>`;
+        } else if (isGroupCreate(input)) {
+            if (output.alreadyExists)
+                content = `Group already exists: <@&${output.group!}>`;
+            else
+                content = `Created <@&${output.group!}>\nJoin it with \`/group join name:${input.name}\``;
         } else if (isGroupDelete(input)) {
             content = `Deleted group \`${input.name}\``;
         } else {
@@ -177,17 +195,44 @@ export class GroupCommandHandler extends CommandHandler<GroupRequest, GroupRespo
             return { groups };
         }
 
+        const roleToIDs = invertRoleIDs(this.roleIDs);
+        const role = findRole(roleToIDs, input.requester.roles);
+        if (!role) {
+            // TODO
+            throw "no role";
+        }
+
+        let alreadyExists = undefined;
         let group: Group | null;
         if (isGroupJoin(input)) {
             group = await this.manager.joinGroup(input.name, userID);
         } else if (isGroupLeave(input)) {
             group = await this.manager.leaveGroup(input.name, userID);
+        } else if (isGroupCreate(input)) {
+            // TODO: This should probably live inside the manager?
+            const createPerm = canManageGroup(role)
+            if (!createPerm.allow) {
+                throw new GroupCommandHandlerError({
+                    type: GroupCommandHandlerErrorType.INSUFFICIENT_PRIVILEGES,
+                    userDesc: createPerm.reason,
+                });
+            }
+            const [gr, ex] = await this.manager.createGroup(input.name);
+            group = gr;
+            alreadyExists = ex;
         } else if (isGroupDelete(input)) {
+            const deletePerm = canManageGroup(role)
+            if (!deletePerm.allow) {
+                throw new GroupCommandHandlerError({
+                    type: GroupCommandHandlerErrorType.INSUFFICIENT_PRIVILEGES,
+                    userDesc: deletePerm.reason,
+                });
+            }
             group = await this.manager.deleteGroup(input.name);
         } else {
             throw new GroupCommandHandlerError({
                 type: GroupCommandHandlerErrorType.MIS_STRUCTURED_COMMAND,
-                opDesc: "command was neight list, join, leave, nor delete",
+                opDesc: "command was neight list, join, leave, create nor delete",
             });
         }
 
@@ -200,7 +245,7 @@ export class GroupCommandHandler extends CommandHandler<GroupRequest, GroupRespo
             });
         }
 
-        return { group };
+        return { group, alreadyExists };
     }
 }
 

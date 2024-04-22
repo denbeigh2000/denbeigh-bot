@@ -62,6 +62,9 @@ export class Group {
     }
 }
 
+// TODO: this should get redone so it uses the DB as the source of truth
+// TODO: this should also take into account permissions
+
 export class GroupManager {
     client: BotClient;
     guildId: string;
